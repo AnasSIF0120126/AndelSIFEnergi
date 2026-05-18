@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIF Energi – Oprettelse af udkald</title>
+  <style>
+    :root {
+      --sif-green: #0b6b57;
+      --sif-green-dark: #084c3f;
+      --sif-green-soft: #e7f5f1;
+      --sif-lime: #8dc63f;
+      --sif-gold: #f4b400;
+      --sif-red: #c53b32;
+      --bg: #f4f7f6;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #61707d;
+      --line: #d9e2e8;
+      --shadow: 0 12px 30px rgba(8, 35, 31, 0.10);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .sif-process-webpart {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--sif-green), var(--sif-green-dark));
+      color: #fff;
+      border-radius: 28px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .hero::before {
+      width: 220px;
+      height: 220px;
+      right: -60px;
+      top: -60px;
+    }
+
+    .hero::after {
+      width: 160px;
+      height: 160px;
+      right: 120px;
+      bottom: -60px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-mark {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .brand-text {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    .hero h1,
+    .hero p,
+    .meta {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 920px;
+      line-height: 1.55;
+      opacity: 0.96;
+      font-size: 16px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .meta-card {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 14px 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .meta-card .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.8;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr 0.95fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel,
+    .side-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      border: 1px solid rgba(11,107,87,0.08);
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 24px;
+      color: var(--sif-green-dark);
+    }
+
+    .section-intro {
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.55;
+    }
+
+    .embed-note {
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--sif-green-soft);
+      border-left: 5px solid var(--sif-green);
+      color: var(--sif-green-dark);
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      gap: 14px;
+    }
+
+    .step {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      text-align: left;
+      padding: 18px;
+      border: 2px solid transparent;
+      border-radius: 18px;
+      background: #fbfcfc;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .step:hover,
+    .step.active {
+      transform: translateY(-2px);
+      border-color: var(--sif-green);
+      background: linear-gradient(180deg, #ffffff, var(--sif-green-soft));
+      box-shadow: 0 10px 24px rgba(11, 107, 87, 0.10);
+    }
+
+    .step::after {
+      content: "↓";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -25px;
+      color: #adc3bc;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .icon-box {
+      min-width: 54px;
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--sif-green), #13856d);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .step h3 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      color: var(--sif-green-dark);
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .step-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini-tag,
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mini-tag {
+      background: #eef6f3;
+      color: var(--sif-green);
+      border: 1px solid #d1ebe2;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      margin-bottom: 16px;
+    }
+
+    .badge {
+      background: #eef4ea;
+      color: #4d6e20;
+      border: 1px solid #dde9cc;
+    }
+
+    .details h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 26px;
+      color: var(--sif-green-dark);
+    }
+
+    .detail-lead {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .detail-box {
+      background: #f9fbfb;
+      border: 1px solid #e4ece9;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .detail-box h4 {
+      margin: 0 0 10px;
+      color: var(--sif-green-dark);
+    }
+
+    .details ul {
+      padding-left: 20px;
+      margin: 0;
+    }
+
+    .details li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .callout {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff9e8;
+      border-left: 5px solid var(--sif-gold);
+    }
+
+    .callout.warn {
+      background: #fff1f0;
+      border-left-color: var(--sif-red);
+    }
+
+    .callout strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #6a4a00;
+    }
+
+    .callout.warn strong {
+      color: #7e1f1f;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .pill-box {
+      background: #f7faf8;
+      border: 1px solid #e1ebe6;
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .pill-box h4 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      color: var(--sif-green-dark);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e6ecef;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f4f9f7;
+      color: var(--sif-green-dark);
+      font-size: 13px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .grid-two { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .sif-process-webpart { padding: 14px; }
+      .hero { padding: 22px; border-radius: 22px; }
+      .hero h1 { font-size: 28px; }
+      .panel, .side-card { padding: 18px; }
+      .step { padding: 16px; }
+      .icon-box { min-width: 48px; width: 48px; height: 48px; font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sif-process-webpart">
+    <section class="hero">
+      <div class="brand-row">
+        <div class="brand-mark">🛠️</div>
+        <div class="brand-text">SIF Energi · Intern proces</div>
+      </div>
+      <h1>Interaktiv proces for oprettelse af udkald</h1>
+      <p>Klik på et trin i flowet for at se detaljer, kontroller og opmærksomhedspunkter. Siden følger samme design og interaktive virkemåde som den eksisterende proces-HTML, men er tilpasset indholdet fra procesbeskrivelsen om oprettelse af udkald til Andel Energis slutkunder.</p>
+      <div class="meta">
+        <div class="meta-card"><div class="label">System</div><div>Navision + ExpandIT</div></div>
+        <div class="meta-card"><div class="label">Afdeling</div><div>399</div></div>
+        <div class="meta-card"><div class="label">Kundenummer</div><div>70292323 · Andel Energi</div></div>
+        <div class="meta-card"><div class="label">Version</div><div>29-12-2025</div></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <h2 class="section-title">Procesflow</h2>
+        <div class="embed-note"><strong>Embed-klar:</strong> Filen er bygget som én samlet HTML-fil med indbygget CSS og JavaScript, så den kan bruges på samme måde som den eksisterende proces-side.</div>
+        <div class="section-intro">Flowet samler de vigtigste krav fra procesbeskrivelsen: korrekt afdeling, korrekt kundenummer, slutkundens leveringsadresse og de særlige regler for oprettelse i Navision og ExpandIT.</div>
+        <div class="flow" id="flow"></div>
+        <div class="footer-note">Tip: Hvis I vil bruge siden i SharePoint, kan den indsættes som en HTML-webdel eller via jeres normale embed-metode, præcis som den eksisterende processide.</div>
+      </section>
+
+      <aside>
+        <section class="side-card details" id="details"></section>
+
+        <section class="side-card" style="margin-top: 20px;">
+          <h3 style="margin-top:0; color: var(--sif-green-dark);">Nøgledata og faste regler</h3>
+
+          <table>
+            <thead>
+              <tr><th>Felt</th><th>Skal være</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Afdeling</td><td>399</td></tr>
+              <tr><td>Kundenummer</td><td>70292323 – Andel Energi</td></tr>
+              <tr><td>Kodefelt i Navision</td><td>VP</td></tr>
+              <tr><td>Leveringsadresse</td><td>Altid slutkunden</td></tr>
+            </tbody>
+          </table>
+
+          <table>
+            <thead>
+              <tr><th>Når leveringsadresse mangler</th><th>Handling</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Adresse findes ikke</td><td>Opret den manuelt</td></tr>
+              <tr><td>Adresse-nummer</td><td>Brug slutkundens telefonnummer</td></tr>
+              <tr><td>Kontaktoplysninger</td><td>Angiv slutkundens mailadresse</td></tr>
+            </tbody>
+          </table>
+
+          <table>
+            <thead>
+              <tr><th>System</th><th>Hvornår bruges det typisk?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Navision</td><td>Standard oprettelse af regningssag til udkald</td></tr>
+              <tr><td>ExpandIT</td><td>Når montøren opdager fejl ved eftersyn og kan udbedre dem med det samme</td></tr>
+            </tbody>
+          </table>
+
+          <div class="small">Brug boksen som hurtig kvalitetssikring, før sagen sendes videre til udførelse og senere fakturering.</div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        icon: '🎯',
+        title: 'Forstå formålet med processen',
+        short: 'Ensartet oprettelse af udkald til Andel Energis slutkunder.',
+        description: 'Processen skal sikre, at udkald til Andel Energis slutkunder bliver oprettet ensartet og med de rigtige stamdata, så både udførelse og efterfølgende fakturering kan ske korrekt.',
+        checks: [
+          'Bekræft at sagen vedrører Andel Energis slutkunde.',
+          'Brug processen som særlig variant af almindeligt regningsarbejde.',
+          'Vær opmærksom på afdeling, kundenummer og leveringsadresse fra start.'
+        ],
+        tags: ['Formål', 'Grundregel', 'Andel Energi'],
+        role: 'Administration / montør',
+        output: 'Fælles forståelse af proceskrav',
+        calloutTitle: 'Hvorfor er dette vigtigt?',
+        calloutText: 'Små fejl i oprettelsen kan give problemer senere i både planlægning, udførelse og fakturering.'
+      },
+      {
+        icon: '🧾',
+        title: 'Opret sagen i Navision',
+        short: 'Brug almindelig regningssag, men med den korrekte opsætning til udkald.',
+        description: 'Sagen oprettes som en sædvanlig regningssag i Navision. I kodefeltet skrives ikke “REGNING”, men “VP”, så skemaer og koder bliver sat korrekt op til denne type opgave.',
+        checks: [
+          'Opret sagen som regningssag.',
+          'Angiv “VP” i kodefeltet i oprettelsesguiden.',
+          'Kontrollér at sagen oprettes med korrekt skemalogik og koder.'
+        ],
+        tags: ['Navision', 'VP', 'Oprettelse'],
+        role: 'Administration',
+        output: 'Korrekt oprettet sag i Navision',
+        calloutTitle: 'Husk',
+        calloutText: 'Brug af forkert kodefelt kan betyde, at sagen bliver sat forkert op fra starten.'
+      },
+      {
+        icon: '🏢',
+        title: 'Sæt afdeling og kundenummer korrekt',
+        short: 'Afdeling 399 og kundenummer 70292323 er obligatoriske.',
+        description: 'Udkald til Andel Energis slutkunder skal altid placeres i afdeling 399. Kundenummeret skal være 70292323 – Andel Energi.',
+        checks: [
+          'Afdeling er sat til 399.',
+          'Kundenummer er 70292323 – Andel Energi.',
+          'Kontrollér at sagen ikke ligger på montørens normale afdeling ved en fejl.'
+        ],
+        tags: ['Afdeling 399', 'Kundenummer', 'Kritisk kontrol'],
+        role: 'Administration / montør',
+        output: 'Korrekt organisatorisk placering af sagen',
+        calloutTitle: 'Fejlrisiko',
+        calloutText: 'Forkert afdeling eller kunde giver fejl i videre behandling og kan gøre faktureringen misvisende.',
+        warn: true
+      },
+      {
+        icon: '📍',
+        title: 'Angiv slutkunden som leveringsadresse',
+        short: 'Leveringsadressen er altid slutkunden – aldrig bare Andel Energi.',
+        description: 'På sagen skal leveringsadressen altid være slutkundens adresse. Hvis adressen ikke allerede findes i systemet, skal den oprettes manuelt.',
+        checks: [
+          'Leveringsadressen er slutkundens faktiske adresse.',
+          'Hvis adressen mangler, bliver den oprettet.',
+          'Slutkundens telefonnummer bruges som nummer på adressen.'
+        ],
+        tags: ['Leveringsadresse', 'Slutkunde', 'Adressestyring'],
+        role: 'Administration / montør',
+        output: 'Sag med korrekt leveringsadresse',
+        calloutTitle: 'Kontrolpunkt',
+        calloutText: 'Det er ikke nok at vælge den rigtige kunde. Selve leveringsadressen skal pege på slutkunden.'
+      },
+      {
+        icon: '✉️',
+        title: 'Registrér kontaktdata og sigende beskrivelse',
+        short: 'Mailadresse og tydelig opgavebeskrivelse skal med på sagen.',
+        description: 'Når leveringsadressen oprettes eller ajourføres, er det vigtigt at angive slutkundens mailadresse. I sagsbeskrivelsen bør der stå “Udkald” efterfulgt af en kort og sigende beskrivelse af opgaven.',
+        checks: [
+          'Slutkundens mailadresse er angivet.',
+          'Beskrivelsen starter gerne med ordet “Udkald”.',
+          'Beskrivelsen gør opgaven let at forstå senere i forløbet.'
+        ],
+        tags: ['Mailadresse', 'Beskrivelse', 'Sporbarhed'],
+        role: 'Administration / montør',
+        output: 'Tydeligt beskrevet sag med kontaktdata',
+        calloutTitle: 'Hvorfor hjælper det?',
+        calloutText: 'En sigende tekst gør det lettere for montører, planlægning og fakturering at forstå opgaven uden ekstra opslag.'
+      },
+      {
+        icon: '📨',
+        title: 'Send arbejdskort til montørerne',
+        short: 'Efter oprettelsen sendes arbejdskort til de montører, der skal udføre opgaven.',
+        description: 'Når sagen er oprettet korrekt, sendes arbejdskort ud til den eller de montører, som skal udføre opgaven hos slutkunden.',
+        checks: [
+          'Arbejdskort sendes til de relevante montører.',
+          'Opgaven er forståelig ud fra sagsdata og beskrivelse.',
+          'Eventuelle særlige forhold er medtaget før udsendelse.'
+        ],
+        tags: ['Arbejdskort', 'Montør', 'Udførelse'],
+        role: 'Administration / planlægning',
+        output: 'Montører har grundlag for udførelse',
+        calloutTitle: 'God praksis',
+        calloutText: 'Jo bedre sagen er oprettet, jo mindre behov er der for afklaringer ude i driften.'
+      },
+      {
+        icon: '📱',
+        title: 'Brug ExpandIT ved opgaver fundet under eftersyn',
+        short: 'Montøren kan oprette opgaven direkte, hvis fejl opdages og kan udbedres straks.',
+        description: 'Opgaver kan også oprettes i ExpandIT. Det er især relevant, når montører er på eftersyn, opdager en fejl på anlægget og kan udbedre fejlen med det samme.',
+        checks: [
+          'Vurder om opgaven er opstået i forbindelse med eftersyn.',
+          'Opret sagen i ExpandIT, hvis det er den hurtigste og rigtige vej.',
+          'Brug stadig afdeling 399, hvis montøren normalt hører til en anden afdeling.'
+        ],
+        tags: ['ExpandIT', 'Eftersyn', 'Montørflow'],
+        role: 'Montør',
+        output: 'Korrekt oprettet opgave fra marken',
+        calloutTitle: 'Særligt opmærksomhedspunkt',
+        calloutText: 'Montøren skal aktivt ændre afdelingsnummeret, hvis hans normale afdeling ikke er 399.'
+      },
+      {
+        icon: '✅',
+        title: 'Afslut med kvalitetstjek før videre forløb',
+        short: 'Kontrollér stamdata, så sagen er klar til udførelse og senere fakturering.',
+        description: 'Inden sagen betragtes som korrekt oprettet, bør de vigtigste felter kvalitetssikres: afdeling, kundenummer, leveringsadresse, mailadresse og en tydelig beskrivelse. Dette er særligt vigtigt, når opgaven efterfølgende skal faktureres.',
+        checks: [
+          'Afdeling 399 er kontrolleret.',
+          'Kundenummer 70292323 er kontrolleret.',
+          'Leveringsadresse og kontaktdata er komplette.',
+          'Beskrivelsen er sigende og evt. markeret med “Udkald”.'
+        ],
+        tags: ['Kvalitetstjek', 'Fakturering', 'Klar til drift'],
+        role: 'Administration / montør',
+        output: 'Sag klar til udførelse og korrekt efterbehandling',
+        calloutTitle: 'Slutmål',
+        calloutText: 'Målet er en ensartet oprettelse, der giver et stabilt grundlag for både udførelse og fakturering.'
+      }
+    ];
+
+    const flow = document.getElementById('flow');
+    const details = document.getElementById('details');
+
+    function renderDetails(index) {
+      const step = steps[index];
+      document.querySelectorAll('.step').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+
+      details.innerHTML = `
+        <h3>${step.icon} ${step.title}</h3>
+        <p class="detail-lead">${step.description}</p>
+
+        <div class="badge-row">
+          ${step.tags.map(tag => `<span class="badge">${tag}</span>`).join('')}
+        </div>
+
+        <div class="grid-two">
+          <div class="pill-box">
+            <h4>Primær rolle</h4>
+            <div>${step.role}</div>
+          </div>
+          <div class="pill-box">
+            <h4>Forventet output</h4>
+            <div>${step.output}</div>
+          </div>
+        </div>
+
+        <div class="detail-box">
+          <h4>Kontrolpunkter</h4>
+          <ul>
+            ${step.checks.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="callout ${step.warn ? 'warn' : ''}">
+          <strong>${step.calloutTitle}</strong>
+          <div>${step.calloutText}</div>
+        </div>
+      `;
+    }
+
+    steps.forEach((step, index) => {
+      const button = document.createElement('button');
+      button.className = 'step';
+      button.type = 'button';
+      button.innerHTML = `
+        <div class="icon-box">${step.icon}</div>
+        <div>
+          <h3>${step.title}</h3>
+          <p>${step.short}</p>
+          <div class="step-meta">
+            ${step.tags.slice(0, 2).map(tag => `<span class="mini-tag">${tag}</span>`).join('')}
+          </div>
+        </div>
+      `;
+      button.addEventListener('click', () => renderDetails(index));
+      flow.appendChild(button);
+    });
+
+    renderDetails(0);
+  </script>
+</body>
+</html>

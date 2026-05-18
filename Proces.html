@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIF Energi – Interaktivt procesdiagram</title>
+  <style>
+    :root {
+      --sif-green: #0b6b57;
+      --sif-green-dark: #084c3f;
+      --sif-green-soft: #e7f5f1;
+      --sif-lime: #8dc63f;
+      --sif-gold: #f4b400;
+      --sif-red: #c53b32;
+      --bg: #f4f7f6;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #61707d;
+      --line: #d9e2e8;
+      --shadow: 0 12px 30px rgba(8, 35, 31, 0.10);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .sif-process-webpart {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--sif-green), var(--sif-green-dark));
+      color: #fff;
+      border-radius: 28px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .hero::before {
+      width: 220px;
+      height: 220px;
+      right: -60px;
+      top: -60px;
+    }
+
+    .hero::after {
+      width: 160px;
+      height: 160px;
+      right: 120px;
+      bottom: -60px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-mark {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .brand-text {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    .hero h1,
+    .hero p,
+    .meta {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 920px;
+      line-height: 1.55;
+      opacity: 0.96;
+      font-size: 16px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .meta-card {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 18px;
+      padding: 14px 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .meta-card .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.8;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.45fr 0.95fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel,
+    .side-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      border: 1px solid rgba(11,107,87,0.08);
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 24px;
+      color: var(--sif-green-dark);
+    }
+
+    .section-intro {
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.55;
+    }
+
+    .embed-note {
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--sif-green-soft);
+      border-left: 5px solid var(--sif-green);
+      color: var(--sif-green-dark);
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      gap: 14px;
+    }
+
+    .step {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      text-align: left;
+      padding: 18px;
+      border: 2px solid transparent;
+      border-radius: 18px;
+      background: #fbfcfc;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .step:hover,
+    .step.active {
+      transform: translateY(-2px);
+      border-color: var(--sif-green);
+      background: linear-gradient(180deg, #ffffff, var(--sif-green-soft));
+      box-shadow: 0 10px 24px rgba(11, 107, 87, 0.10);
+    }
+
+    .step::after {
+      content: "↓";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -25px;
+      color: #adc3bc;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .icon-box {
+      min-width: 54px;
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--sif-green), #13856d);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .step h3 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      color: var(--sif-green-dark);
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.4;
+      font-size: 14px;
+    }
+
+    .step-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini-tag,
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mini-tag {
+      background: #eef6f3;
+      color: var(--sif-green);
+      border: 1px solid #d1ebe2;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      margin-bottom: 16px;
+    }
+
+    .badge {
+      background: #eef4ea;
+      color: #4d6e20;
+      border: 1px solid #dde9cc;
+    }
+
+    .details h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 26px;
+      color: var(--sif-green-dark);
+    }
+
+    .detail-lead {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .detail-box {
+      background: #f9fbfb;
+      border: 1px solid #e4ece9;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .detail-box h4 {
+      margin: 0 0 10px;
+      color: var(--sif-green-dark);
+    }
+
+    .details ul {
+      padding-left: 20px;
+      margin: 0;
+    }
+
+    .details li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .callout {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      background: #fff9e8;
+      border-left: 5px solid var(--sif-gold);
+    }
+
+    .callout.warn {
+      background: #fff1f0;
+      border-left-color: var(--sif-red);
+    }
+
+    .callout strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #6a4a00;
+    }
+
+    .callout.warn strong {
+      color: #7e1f1f;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .pill-box {
+      background: #f7faf8;
+      border: 1px solid #e1ebe6;
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .pill-box h4 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      color: var(--sif-green-dark);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e6ecef;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f4f9f7;
+      color: var(--sif-green-dark);
+      font-size: 13px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .grid-two { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .sif-process-webpart { padding: 14px; }
+      .hero { padding: 22px; border-radius: 22px; }
+      .hero h1 { font-size: 28px; }
+      .panel, .side-card { padding: 18px; }
+      .step { padding: 16px; }
+      .icon-box { min-width: 48px; width: 48px; height: 48px; font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sif-process-webpart">
+    <section class="hero">
+      <div class="brand-row">
+        <div class="brand-mark">⚡</div>
+        <div class="brand-text">SIF Energi · Intern proces</div>
+      </div>
+      <h1>Interaktivt procesdiagram for fakturering af udkald</h1>
+      <p>Klik på et trin i flowet for at se detaljer, kontroller og opmærksomhedspunkter. Løsningen er designet som en HTML-webdel, der kan bruges internt på et SharePoint-site.</p>
+      <div class="meta">
+        <div class="meta-card"><div class="label">System</div><div>Navision + Excel</div></div>
+        <div class="meta-card"><div class="label">Input</div><div>Rød-Gul-Grøn liste</div></div>
+        <div class="meta-card"><div class="label">Output</div><div>Faktura til Andel Energi</div></div>
+        <div class="meta-card"><div class="label">Version</div><div>29-12-2025</div></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <h2 class="section-title">Procesflow</h2>
+        <div class="embed-note"><strong>Embed-klar:</strong> Koden er samlet i én HTML-fil med indbygget CSS og JavaScript, så den er nem at indsætte i en HTML-webdel eller via jeres foretrukne SharePoint-embedmetode.</div>
+        <div class="section-intro">Procesflowet er udarbejdet i et visuelt SIF Energi-design med farver, ikoner og tydelige kontrolpunkter, så medarbejdere hurtigt kan forstå og følge processen.</div>
+        <div class="flow" id="flow"></div>
+        <div class="footer-note">Anbefaling: Brug denne version som basis og tilpas eventuelt logo, skrifttyper og farvekoder til jeres officielle designmanual, hvis I har faste brandkrav på SharePoint.</div>
+      </section>
+
+      <aside>
+        <section class="side-card details" id="details"></section>
+
+        <section class="side-card" style="margin-top: 20px;">
+          <h3 style="margin-top:0; color: var(--sif-green-dark);">Pris- og kontroloversigt</h3>
+
+          <table>
+            <thead>
+              <tr><th>Fast element</th><th>Pris</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Udkaldsgebyr</td><td>kr. 700,-</td></tr>
+            </tbody>
+          </table>
+
+          <table>
+            <thead>
+              <tr><th>Geografisk zonetillæg</th><th>Pris pr. udkald</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fyn</td><td>kr. 400,-</td></tr>
+              <tr><td>Sønderjylland</td><td>kr. 800,-</td></tr>
+              <tr><td>Nordjylland</td><td>kr. 1.000,-</td></tr>
+              <tr><td>Sjælland</td><td>kr. 1.000,-</td></tr>
+            </tbody>
+          </table>
+
+          <table>
+            <thead>
+              <tr><th>Rolle</th><th>Timepris</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Elektriker</td><td>kr. 587,-</td></tr>
+              <tr><td>Lærlinge</td><td>kr. 398,-</td></tr>
+              <tr><td>Servicemedarbejder</td><td>kr. 489,-</td></tr>
+              <tr><td>Energitekniker</td><td>kr. 700,-</td></tr>
+              <tr><td>Datatekniker / programmør</td><td>kr. 1.450,-</td></tr>
+              <tr><td>Servicevogn</td><td>kr. 111,-</td></tr>
+              <tr><td>Administration / projektledelse</td><td>kr. 750,-</td></tr>
+            </tbody>
+          </table>
+
+          <div class="small">Brug denne oversigt som fast kvalitetstjek ved gennemgang af fakturaforslag.</div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        icon: '📋',
+        title: 'Træk Rød-Gul-Grøn liste',
+        short: 'Listen trækkes minimum én gang ugentligt.',
+        description: 'Start processen ved at trække den opdaterede Rød-Gul-Grøn liste. Listen bruges som grundlag for at identificere afsluttede sager, der er klar til fakturering.',
+        checks: [
+          'Sikre at listen er den nyeste version.',
+          'Kontrollere at alle relevante afsluttede sager er med.',
+          'Gennemføre processen minimum én gang ugentligt.'
+        ],
+        tags: ['Input', 'Ugentlig', 'Navision / Excel'],
+        role: 'Administration / fakturering',
+        output: 'Opdateret oversigt over afsluttede sager',
+        calloutTitle: 'Hvorfor er dette vigtigt?',
+        calloutText: 'En forældet liste kan føre til forsinket fakturering eller oversete sager.'
+      },
+      {
+        icon: '🔎',
+        title: 'Identificér afsluttede sager',
+        short: 'Vælg de sager der er klar til fakturering.',
+        description: 'Gennemgå listen og udpeg de afsluttede sager, hvor der skal dannes fakturaforslag. Denne del følger samme overordnede metode som ved almindeligt regningsarbejde.',
+        checks: [
+          'Sagen skal være afsluttet.',
+          'Registreringer må ikke mangle væsentlige oplysninger.',
+          'Sagen skal vedrøre Andel Energi-kunden.'
+        ],
+        tags: ['Udvælgelse', 'Afsluttede sager'],
+        role: 'Administration / fakturering',
+        output: 'Udvalgte sager klar til fakturaforslag',
+        calloutTitle: 'Husk',
+        calloutText: 'Selve grundprocessen ligner almindeligt regningsarbejde, men kontrol af tillæg og timepriser er særligt vigtig her.'
+      },
+      {
+        icon: '🧾',
+        title: 'Dan fakturaforslag',
+        short: 'Opret fakturaforslag på de udvalgte sager.',
+        description: 'På baggrund af de afsluttede sager dannes fakturaforslag i systemet. Disse forslag er udgangspunktet for den efterfølgende kontrol af priser, tillæg og kundeopsætning.',
+        checks: [
+          'Fakturaforslag er oprettet for alle relevante sager.',
+          'Ingen sager er oprettet dobbelt.',
+          'Forslagene kan spores tilbage til kildelisten.'
+        ],
+        tags: ['Navision', 'Fakturaforslag'],
+        role: 'Administration / fakturering',
+        output: 'Fakturaforslag klar til kontrol',
+        calloutTitle: 'Fokuspunkt',
+        calloutText: 'Ensartet oprettelse gør efterkontrollen hurtigere og reducerer risikoen for fejl.'
+      },
+      {
+        icon: '⚙️',
+        title: 'Kontrollér kundeopsætning',
+        short: 'Tjek at Andel Energi er sat korrekt op i systemet.',
+        description: 'Kontrollér at kunden 70292323 – Andel Energi er sat korrekt op, så de rigtige sagssalgstillæg og timepriser anvendes på fakturaen.',
+        checks: [
+          'Kundenummer 70292323 er korrekt.',
+          'Sagssalgstillæg er korrekt opsat.',
+          'Timepriser er korrekt knyttet til kunden.'
+        ],
+        tags: ['Kundedata', 'Kritisk kontrol'],
+        role: 'Administration / systemansvarlig',
+        output: 'Valideret kundeopsætning',
+        calloutTitle: 'Fejlrisiko',
+        calloutText: 'Forkert opsætning kan give fejl på alle linjer og medføre kreditnota eller genfakturering.'
+      },
+      {
+        icon: '📍',
+        title: 'Verificér udkaldsgebyr og zonetillæg',
+        short: 'Tjek faste tillæg på alle udkaldsfakturaer.',
+        description: 'Kontrollér at alle fakturaer vedrørende udkald indeholder udkaldsgebyr på kr. 700,- samt korrekt geografisk zonetillæg ud fra området.',
+        checks: [
+          'Udkaldsgebyr på kr. 700,- er med.',
+          'Korrekt geografisk zonetillæg er valgt.',
+          'Der er ikke anvendt forkerte eller flere zonetillæg end nødvendigt.'
+        ],
+        tags: ['Gebyr', 'Zonetillæg'],
+        role: 'Administration / fakturering',
+        output: 'Validerede tillægslinjer',
+        calloutTitle: 'Kontrolregel',
+        calloutText: 'Dette trin bør altid være en synlig manuel kvalitetssikring, selv hvis noget beregnes automatisk i systemet.'
+      },
+      {
+        icon: '⏱️',
+        title: 'Verificér timepriser',
+        short: 'Sammenhold registreringer med aftalte priser.',
+        description: 'Gennemgå fakturaforslaget og kontrollér at de anvendte timepriser svarer til den indgåede kontrakt for hver medarbejdertype og ydelse.',
+        checks: [
+          'Rolle og timepris stemmer overens.',
+          'Servicevogn og administration/projektledelse er korrekt prissat, hvis de er anvendt.',
+          'Datatekniker / programmør anvender særskilt sats.'
+        ],
+        tags: ['Timepriser', 'Kontraktkontrol'],
+        role: 'Administration / fakturering',
+        output: 'Validerede timeprislinjer',
+        calloutTitle: 'Særligt opmærksomhedspunkt',
+        calloutText: 'Priserne skal leve op til den indgåede kontrakt. Dette er et centralt formål i procesbeskrivelsen.'
+      },
+      {
+        icon: '✅',
+        title: 'Godkend og send til fakturering',
+        short: 'Afslut kontrollen og færdiggør fakturaen.',
+        description: 'Når alle priser, tillæg og kundeopsætninger er kontrolleret, kan fakturaen godkendes og færdiggøres som faktura til Andel Energi.',
+        checks: [
+          'Alle obligatoriske linjer er med.',
+          'Alle priser og tillæg er verificeret.',
+          'Fakturaen er klar til afsendelse uden åbne forbehold.'
+        ],
+        tags: ['Output', 'Færdig faktura'],
+        role: 'Administration / godkender',
+        output: 'Korrekt faktura til Andel Energi',
+        calloutTitle: 'Output',
+        calloutText: 'Slutproduktet er en korrekt faktura til Andel Energi, som lever op til den indgåede kontrakt.'
+      }
+    ];
+
+    const flow = document.getElementById('flow');
+    const details = document.getElementById('details');
+
+    function renderDetails(index) {
+      const step = steps[index];
+      document.querySelectorAll('.step').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+
+      details.innerHTML = `
+        <h3>${step.icon} ${step.title}</h3>
+        <p class="detail-lead">${step.description}</p>
+
+        <div class="badge-row">
+          ${step.tags.map(tag => `<span class="badge">${tag}</span>`).join('')}
+        </div>
+
+        <div class="grid-two">
+          <div class="pill-box">
+            <h4>Primær rolle</h4>
+            <div>${step.role}</div>
+          </div>
+          <div class="pill-box">
+            <h4>Forventet output</h4>
+            <div>${step.output}</div>
+          </div>
+        </div>
+
+        <div class="detail-box">
+          <h4>Kontrolpunkter</h4>
+          <ul>
+            ${step.checks.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="callout ${index === 3 ? 'warn' : ''}">
+          <strong>${step.calloutTitle}</strong>
+          <div>${step.calloutText}</div>
+        </div>
+      `;
+    }
+
+    steps.forEach((step, index) => {
+      const button = document.createElement('button');
+      button.className = 'step';
+      button.type = 'button';
+      button.innerHTML = `
+        <div class="icon-box">${step.icon}</div>
+        <div>
+          <h3>${step.title}</h3>
+          <p>${step.short}</p>
+          <div class="step-meta">
+            ${step.tags.slice(0, 2).map(tag => `<span class="mini-tag">${tag}</span>`).join('')}
+          </div>
+        </div>
+      `;
+      button.addEventListener('click', () => renderDetails(index));
+      flow.appendChild(button);
+    });
+
+    renderDetails(0);
+  </script>
+</body>
+</html>

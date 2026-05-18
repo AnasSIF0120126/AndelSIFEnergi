@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+
+<html lang="da">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Flow – kanalspor, roller og proces</title>
+<style>
+  :root{
+    --bg:#f6f8fb;
+    --card:#ffffff;
+    --text:#1f2937;
+    --muted:#6b7280;
+    --line:#dbe3ee;
+    --shadow:0 8px 24px rgba(15,23,42,0.08);
+    --clever:#d9f99d;
+    --andel:#bfdbfe;
+    --watts:#fde68a;
+    --sif:#fecdd3;
+    --common:#e5e7eb;
+    --invoice:#ddd6fe;
+    --flow:#e0f2fe;
+    --sales:#dbeafe;
+    --logistics:#dcfce7;
+    --tech:#ede9fe;
+    --quality:#fee2e2;
+    --finance:#e0f2fe;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial, Helvetica, sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:1500px;margin:0 auto;padding:28px 18px 60px;}
+  h1{margin:0 0 8px;font-size:30px;}
+  .lead{margin:0 0 22px;color:var(--muted);font-size:15px;line-height:1.5;}
+  .toolbar{display:flex;flex-direction:column;gap:10px;margin:0 0 18px;}
+  .filter-buttons,.expand-buttons{display:flex;flex-wrap:wrap;gap:10px;}
+  .toolbar button{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;box-shadow:var(--shadow);transition:all 0.15s ease;}
+  .toolbar button:hover{transform:translateY(-1px);}
+  .toolbar button.is-active{background:#0f172a;color:#fff;border-color:#0f172a;}
+  .toolbar button.expand{background:#dcfce7;border:1px solid #86efac;}
+  .toolbar button.collapse{background:#fee2e2;border:1px solid #fca5a5;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;}
+  .chip{padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid rgba(0,0,0,0.06);}
+  .lane{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden;}
+  .lane-head{padding:14px 18px;font-weight:700;font-size:18px;border-bottom:1px solid var(--line);}
+  .lane-body{display:grid;grid-template-columns: repeat(3, minmax(240px, 1fr));gap:14px;padding:16px;align-items:start;}
+  .lane.common .lane-body{grid-template-columns: repeat(4, minmax(220px, 1fr));}
+  .lane.invoice .lane-body{grid-template-columns: repeat(4, minmax(220px, 1fr));}
+  .node{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);min-height:120px;display:flex;flex-direction:column;justify-content:flex-start;}
+  .node button{all:unset;cursor:pointer;display:block;padding:14px 16px 8px;}
+  .node-title{font-weight:700;font-size:16px;display:block;margin-bottom:6px;}
+  .node-sub{color:var(--muted);font-size:13px;display:block;line-height:1.4;}
+  .details{display:none;padding:0 16px 16px;color:#334155;font-size:14px;line-height:1.5;}
+  .details ul{margin:8px 0 0 18px;padding:0;}
+  .details li{margin:4px 0;}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#f3f4f6;color:#334155;}
+  .tag.sales{background:var(--sales);}
+  .tag.logistics{background:var(--logistics);}
+  .tag.tech{background:var(--tech);}
+  .tag.quality{background:var(--quality);}
+  .tag.finance{background:var(--finance);}
+  .arrowline{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);margin:10px 0 20px;font-weight:700;}
+  .big-arrow{font-size:28px;color:#0f172a;}
+  .help{margin-top:22px;color:var(--muted);font-size:14px;}
+  .c-clever .lane-head{background:var(--clever);}
+  .c-andel .lane-head{background:var(--andel);}
+  .c-watts .lane-head{background:var(--watts);}
+  .c-sif .lane-head{background:var(--sif);}
+  .common .lane-head{background:var(--common);}
+  .invoice .lane-head{background:var(--invoice);}
+  @media (max-width:1200px){
+    .lane-body{grid-template-columns:repeat(2, minmax(220px,1fr));}
+    .lane.common .lane-body,.lane.invoice .lane-body{grid-template-columns:repeat(2, minmax(220px,1fr));}
+  }
+  @media (max-width:760px){
+    .lane-body,.lane.common .lane-body,.lane.invoice .lane-body{grid-template-columns:1fr;}
+    h1{font-size:24px;}
+  }
+  .decision{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);}
+  .decision-label{font-weight:700;margin-bottom:8px;display:block;}
+  .decision-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .decision-btn{all:unset;cursor:pointer;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:700;font-size:13px;}
+  .decision-btn.yes{background:#dcfce7;border-color:#86efac;}
+  .decision-btn.no{background:#fee2e2;border-color:#fca5a5;}
+  .decision-extra{display:none;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;}
+  .decision-extra p{margin:0 0 6px;font-weight:700;}
+</style>
+<script>
+let currentChannel = 'all';
+let currentRole = 'all';
+
+function toggle(id){
+  const el = document.getElementById(id);
+  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+}
+function clearActiveButtons(groupSelector){
+  document.querySelectorAll(groupSelector + ' button').forEach(btn => btn.classList.remove('is-active'));
+}
+function setActiveButton(buttonId, groupSelector){
+  clearActiveButtons(groupSelector);
+  const btn = document.getElementById(buttonId);
+  if(btn){ btn.classList.add('is-active'); }
+}
+function expandAll(){
+  document.querySelectorAll('.details').forEach(el => {
+    if(el.closest('.node') && el.closest('.node').style.display !== 'none') el.style.display = 'block';
+  });
+}
+function collapseAll(){
+  document.querySelectorAll('.details').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.decision-extra').forEach(el => el.style.display = 'none');
+}
+function showDecision(extraId){
+  const el = document.getElementById(extraId);
+  if(el){ el.style.display = 'block'; }
+}
+function hideDecision(extraId){
+  const el = document.getElementById(extraId);
+  if(el){ el.style.display = 'none'; }
+}
+function nodeMatchesRole(node){
+  if(currentRole === 'all') return true;
+  const roles = (node.dataset.roles || '').split(',').map(s => s.trim()).filter(Boolean);
+  return roles.includes(currentRole);
+}
+function laneMatchesChannel(lane){
+  const type = lane.dataset.channel;
+  if(currentChannel === 'all') return true;
+  if(type === 'common' || type === 'invoice') return true;
+  return type === currentChannel;
+}
+function applyFilters(){
+  document.querySelectorAll('.lane[data-channel]').forEach(lane => {
+    const channelOk = laneMatchesChannel(lane);
+    let visibleNodes = 0;
+    lane.querySelectorAll('.node').forEach(node => {
+      const roleOk = nodeMatchesRole(node);
+      const invoiceChannel = node.dataset.channel || '';
+      const invoiceChannelOk = !invoiceChannel || currentChannel === 'all' || invoiceChannel === currentChannel;
+      const show = channelOk && roleOk && invoiceChannelOk;
+      node.style.display = show ? 'flex' : 'none';
+      if(show) visibleNodes += 1;
+    });
+    lane.style.display = (channelOk && visibleNodes > 0) ? 'block' : 'none';
+  });
+  collapseAll();
+}
+function showAllChannels(){
+  currentChannel = 'all';
+  setActiveButton('btn-channel-all', '.channel-buttons');
+  applyFilters();
+}
+function showOnlyChannel(channel){
+  currentChannel = channel;
+  setActiveButton('btn-channel-' + channel, '.channel-buttons');
+  applyFilters();
+}
+function showAllRoles(){
+  currentRole = 'all';
+  setActiveButton('btn-role-all', '.role-buttons');
+  applyFilters();
+}
+function showOnlyRole(role){
+  currentRole = role;
+  setActiveButton('btn-role-' + role, '.role-buttons');
+  applyFilters();
+}
+window.addEventListener('DOMContentLoaded', applyFilters);
+</script>
+</head>
+<body>
+<div class="wrap">
+<h1>Kanalopdelt ordrebehandling med roller</h1>
+<p class="lead">
+    Dette flow viser det overordnede flow og dækker et samlet end-to-end forløb med 8 trin: lead/ordremodtagelse, besigtigelse, tilbud, planlægning, materialebestilling &amp; logistik, udførelse, dokumentation/KS og fakturering. Du kan filtrere både på kanalspor og rolle.
+  </p>
+<div class="toolbar">
+<div class="filter-buttons channel-buttons">
+<button class="is-active" id="btn-channel-all" onclick="showAllChannels()">🌐 Vis alle spor</button>
+<button id="btn-channel-clever" onclick="showOnlyChannel('clever')">⚡ Clever</button>
+<button id="btn-channel-andel" onclick="showOnlyChannel('andel')">🏠 Andel</button>
+<button id="btn-channel-watts" onclick="showOnlyChannel('watts')">🔌 Watts</button>
+<button id="btn-channel-sif" onclick="showOnlyChannel('sif')">🧰 SIF-kunde</button>
+</div>
+<div class="filter-buttons role-buttons">
+<button class="is-active" id="btn-role-all" onclick="showAllRoles()">👥 Vis alle roller</button>
+<button id="btn-role-sales" onclick="showOnlyRole('sales')">🤝 Kundecenter / Salg / Koordinering</button>
+<button id="btn-role-logistics" onclick="showOnlyRole('logistics')">📦 Indkøb / Lager / Logistik</button>
+<button id="btn-role-tech" onclick="showOnlyRole('tech')">🛠️ Teknisk drift / Montør</button>
+<button id="btn-role-quality" onclick="showOnlyRole('quality')">✅ Kvalitet</button>
+<button id="btn-role-finance" onclick="showOnlyRole('finance')">💰 Økonomi / Administration</button>
+</div>
+<div class="expand-buttons">
+<button class="expand" onclick="expandAll()">🔽 Fold alle ud</button>
+<button class="collapse" onclick="collapseAll()">🔼 Fold alle sammen</button>
+</div>
+</div>
+<div class="lane c-clever" data-channel="clever">
+<div class="lane-head">Clever spor</div>
+<div class="lane-body">
+<div class="node" data-roles="sales">
+<button onclick="toggle('clever1')"><span class="node-title">1. Lead / ordremodtagelse</span><span class="node-sub">Clever Portal</span></button>
+<div class="details" id="clever1">
+<ul>
+<li>Sager downloades dagligt fra Clever Portalen</li>
+<li>Filen importeres til Excel-robot</li>
+<li>Filen klargøres til oprettelse</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales,tech">
+<button onclick="toggle('clever2')"><span class="node-title">2. Besigtigelse &amp; behovsafklaring</span><span class="node-sub">Afklaring af grundlag</span></button>
+<div class="details" id="clever2">
+<ul>
+<li>Kunde- og opgavedata vurderes</li>
+<li>Udførelsesforudsætninger vurderes</li>
+</ul>
+<div class="decision">
+<span class="decision-label">Er der behov for besigtigelse &amp; behovsafklaring?</span>
+<div class="decision-buttons">
+<button class="decision-btn yes" onclick="showDecision('clever2_extra'); hideDecision('clever2_no')">Ja</button>
+<button class="decision-btn no" onclick="showDecision('clever2_no'); hideDecision('clever2_extra')">Nej</button>
+</div>
+<div class="decision-extra" id="clever2_extra">
+<p>Ja – besigtigelse er nødvendig</p>
+<ul>
+<li>Der bookes besigtigelse eller ekstra afklaringsmøde</li>
+<li>Eventuelle mangler eller særlige forhold afklares</li>
+<li>Tekniske forhold dokumenteres på stedet</li>
+<li>Resultatet bruges som grundlag for næste trin</li>
+<li>Udførelsesforudsætninger vurderes</li>
+</ul>
+</div>
+<div class="decision-extra" id="clever2_no"><p style="font-size:13px; font-weight:normal;">Gå direkte til 4. Planlægning &amp; tekningerbooking</p></div>
+</div>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span><span class="tag tech">Teknisk drift / Montør</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('clever3')"><span class="node-title">3. Tilbudsgivning &amp; kundeaccept</span><span class="node-sub">Efter Clever-setup</span></button>
+<div class="details" id="clever3">
+<ul>
+<li>Hvis prissætning er givet via partneraftale, springes individuelt tilbud over</li>
+<li>Hvis der er tillæg eller afvigelser, afklares disse inden udførsel</li>
+<li>Ordren anses som godkendt via partnerflow</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('clever4')"><span class="node-title">4. Planlægning &amp; teknikerbooking</span><span class="node-sub">Clever-specifik disponering</span></button>
+<div class="details" id="clever4">
+<ul>
+<li>Udførelsestidspunkter og pulje/afdeling påføres</li>
+<li>Phonere ringer ud og aftaler tidspunkt med kunden</li>
+<li>Montør og dato disponeres</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+</div>
+</div>
+<div class="lane c-andel" data-channel="andel">
+<div class="lane-head">Andel spor</div>
+<div class="lane-body">
+<div class="node" data-roles="sales">
+<button onclick="toggle('andel1')"><span class="node-title">1. Lead / ordremodtagelse</span><span class="node-sub">Ordre kommer via mail</span></button>
+<div class="details" id="andel1">
+<ul>
+<li>Mailen opretter automatisk en linje i en SharePoint-liste</li>
+<li>Ordregrundlag registreres og valideres</li>
+<li>Eventuelle særlige krav afklares</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales,tech">
+<button onclick="toggle('andel2')"><span class="node-title">2. Besigtigelse &amp; behovsafklaring</span><span class="node-sub">Afklaring med slutkunde</span></button>
+<div class="details" id="andel2">
+<ul>
+<li>Behov og praktiske forhold afklares med slutkunden</li>
+<li>Tekniske forudsætninger vurderes</li>
+<li>Afvigelser dokumenteres før næste trin</li>
+</ul>
+<div class="decision">
+<span class="decision-label">Er der behov for besigtigelse &amp; behovsafklaring?</span>
+<div class="decision-buttons">
+<button class="decision-btn yes" onclick="showDecision('andel2_extra'); hideDecision('andel2_no')">Ja</button>
+<button class="decision-btn no" onclick="showDecision('andel2_no'); hideDecision('andel2_extra')">Nej</button>
+</div>
+<div class="decision-extra" id="andel2_extra">
+<p>Ja – besigtigelse er nødvendig</p>
+<ul>
+<li>Slutkunden kontaktes for nærmere afklaring</li>
+<li>Praktiske og tekniske forhold gennemgås</li>
+<li>Afvigelser dokumenteres før tilbud eller planlægning</li>
+</ul>
+</div>
+<div class="decision-extra" id="andel2_no"><p style="font-size:13px; font-weight:normal;">Gå direkte til 4. Planlægning &amp; tekningerbooking</p></div>
+</div>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span><span class="tag tech">Teknisk drift / Montør</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('andel3')"><span class="node-title">3. Tilbudsgivning &amp; kundeaccept</span><span class="node-sub">Efter Andel-model</span></button>
+<div class="details" id="andel3">
+<ul>
+<li>Hvis standardaftale gælder, fortsætter sagen uden individuelt tilbud</li>
+<li>Eventuelle tillæg eller ændringer godkendes</li>
+<li>Accept registreres som del af ordreforløbet</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('andel4')"><span class="node-title">4. Planlægning &amp; teknikerbooking</span><span class="node-sub">Andel-specifik disponering</span></button>
+<div class="details" id="andel4">
+<ul>
+<li>Udførelsestidspunkt afklares med slutkunden</li>
+<li>Montør og tid påføres SharePoint-linjen</li>
+<li>Kommunikation følger partneraftalen</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+</div>
+</div>
+<div class="lane c-watts" data-channel="watts">
+<div class="lane-head">Watts spor</div>
+<div class="lane-body">
+<div class="node" data-roles="sales">
+<button onclick="toggle('watts1')"><span class="node-title">1. Lead / ordremodtagelse</span><span class="node-sub">Ordre kommer fra Watts</span></button>
+<div class="details" id="watts1">
+<ul>
+<li>Ordre og reference modtages fra Watts</li>
+<li>Scope, kundedata og aftalegrundlag valideres</li>
+<li>Rapporteringskrav identificeres</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales,tech">
+<button onclick="toggle('watts2')"><span class="node-title">2. Besigtigelse &amp; behovsafklaring</span><span class="node-sub">Teknisk kvalificering</span></button>
+<div class="details" id="watts2">
+<ul>
+<li>Tekniske forhold og opgavens omfang afklares</li>
+<li>Evt. besigtigelse dokumenteres</li>
+<li>Forudsætninger samles til næste trin</li>
+</ul>
+<div class="decision">
+<span class="decision-label">Er der behov for besigtigelse &amp; behovsafklaring?</span>
+<div class="decision-buttons">
+<button class="decision-btn yes" onclick="showDecision('watts2_extra'); hideDecision('watts2_no')">Ja</button>
+<button class="decision-btn no" onclick="showDecision('watts2_no'); hideDecision('watts2_extra')">Nej</button>
+</div>
+<div class="decision-extra" id="watts2_extra">
+<p>Ja – besigtigelse er nødvendig</p>
+<ul>
+<li>Besigtigelse planlægges som del af kvalificeringen</li>
+<li>Scope og tekniske forhold verificeres på stedet</li>
+<li>Det endelige grundlag opdateres før næste trin</li>
+</ul>
+</div>
+<div class="decision-extra" id="watts2_no"><p style="font-size:13px; font-weight:normal;">Gå direkte til 4. Planlægning &amp; tekningerbooking</p></div>
+</div>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span><span class="tag tech">Teknisk drift / Montør</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('watts3')"><span class="node-title">3. Tilbudsgivning &amp; kundeaccept</span><span class="node-sub">Efter Watts-aftale</span></button>
+<div class="details" id="watts3">
+<ul>
+<li>Pris og afgrænsning følger Watts-strukturen</li>
+<li>Ekstraarbejder eller ændringer afklares</li>
+<li>Godkendelse registreres før booking</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('watts4')"><span class="node-title">4. Planlægning &amp; teknikerbooking</span><span class="node-sub">Watts-disponering</span></button>
+<div class="details" id="watts4">
+<ul>
+<li>Tekniker, dato og forberedelse fastlægges</li>
+<li>Statusmeldinger følger partneropsætning</li>
+<li>Sagen gøres klar til udførelse</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+</div>
+</div>
+<div class="lane c-sif" data-channel="sif">
+<div class="lane-head">SIF-kunde spor</div>
+<div class="lane-body">
+<div class="node" data-roles="sales">
+<button onclick="toggle('sif1')"><span class="node-title">1. Lead / ordremodtagelse</span><span class="node-sub">Direkte fra kunde</span></button>
+<div class="details" id="sif1">
+<ul>
+<li>Lead eller ordre kommer direkte fra kunden</li>
+<li>Kundeoplysninger og behov registreres</li>
+<li>Indledende kvalificering gennemføres</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales,tech">
+<button onclick="toggle('sif2')"><span class="node-title">2. Besigtigelse &amp; behovsafklaring</span><span class="node-sub">Direkte kundedialog</span></button>
+<div class="details" id="sif2">
+<ul>
+<li>Besigtigelse planlægges og gennemføres ved behov</li>
+<li>Kundens behov og tekniske forhold afklares</li>
+<li>Løsningsforslag kvalificeres</li>
+</ul>
+<div class="decision">
+<span class="decision-label">Er der behov for besigtigelse &amp; behovsafklaring?</span>
+<div class="decision-buttons">
+<button class="decision-btn yes" onclick="showDecision('sif2_extra'); hideDecision('sif2_no')">Ja</button>
+<button class="decision-btn no" onclick="showDecision('sif2_no'); hideDecision('sif2_extra')">Nej</button>
+</div>
+<div class="decision-extra" id="sif2_extra">
+<p>Ja – besigtigelse er nødvendig</p>
+<ul>
+<li>Besigtigelse aftales direkte med kunden</li>
+<li>Kundens behov og de fysiske forhold afdækkes</li>
+<li>Løsningsforslag og prisgrundlag kvalificeres</li>
+</ul>
+</div>
+<div class="decision-extra" id="sif2_no"><p style="font-size:13px; font-weight:normal;">Gå direkte til 4. Planlægning &amp; tekningerbooking</p></div>
+</div>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span><span class="tag tech">Teknisk drift / Montør</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('sif3')"><span class="node-title">3. Tilbudsgivning &amp; kundeaccept</span><span class="node-sub">Tilbud til egen kunde</span></button>
+<div class="details" id="sif3">
+<ul>
+<li>Tilbud udarbejdes på baggrund af behovsafklaring</li>
+<li>Kunden accepterer tilbud og vilkår</li>
+<li>Evt. interne godkendelser gennemføres</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+<div class="node" data-roles="sales">
+<button onclick="toggle('sif4')"><span class="node-title">4. Planlægning &amp; teknikerbooking</span><span class="node-sub">Intern booking</span></button>
+<div class="details" id="sif4">
+<ul>
+<li>Montør, dato og kapacitet disponeres</li>
+<li>Kunden kontaktes og tidspunkt fastlægges</li>
+<li>Ordren gøres klar til udførelse</li>
+</ul>
+<div class="tagrow"><span class="tag sales">Kundecenter / Salg / Koordinering</span></div>
+</div>
+</div>
+</div>
+</div>
+<div class="arrowline">
+<span>Alle spor samles i fælles teknisk proces</span>
+<span class="big-arrow">↓</span>
+</div>
+<div class="lane common" data-channel="common">
+<div class="lane-head">Fælles teknisk proces</div>
+<div class="lane-body">
+<div class="node" data-roles="logistics">
+<button onclick="toggle('common1')"><span class="node-title">5. Materialebestilling &amp; logistik</span><span class="node-sub">Fælles forsyning og koordinering</span></button>
+<div class="details" id="common1">
+<ul>
+<li>Materialebehov samles og afstemmes med den planlagte opgave</li>
+<li>Varer bestilles, plukkes eller reserveres til rette dato</li>
+<li>Levering og logistik koordineres med montør og udførelsestidspunkt</li>
+</ul>
+<div class="tagrow"><span class="tag logistics">Indkøb / Lager / Logistik</span></div>
+</div>
+</div>
+<div class="node" data-roles="tech">
+<button onclick="toggle('common2')"><span class="node-title">6. Udførelse</span><span class="node-sub">Installation / service / udkald</span></button>
+<div class="details" id="common2">
+<ul>
+<li>Montør udfører opgaven efter sin opgaveliste i ExpandIT</li>
+<li>Timer og materialer registreres dagligt</li>
+<li>Arbejdet gennemføres hos kunden</li>
+</ul>
+<div class="tagrow"><span class="tag tech">Teknisk drift / Montør</span></div>
+</div>
+</div>
+<div class="node" data-roles="quality">
+<button onclick="toggle('common4')"><span class="node-title">7. Dokumentation &amp; kvalitetssikring</span><span class="node-sub">Dokumentér og KS</span></button>
+<div class="details" id="common4">
+<ul>
+<li>Tjekskemaer og KS udfyldes</li>
+<li>Dokumentation, billeder og registreringer samles</li>
+<li>Afvigelser rettes før sagen frigives til afregning</li>
+</ul>
+<div class="tagrow"><span class="tag quality">Kvalitet</span></div>
+</div>
+</div>
+</div>
+</div>
+<div class="arrowline">
+<span>Efter fælles teknisk proces afsluttes sagen med kanalopdelt fakturering</span>
+<span class="big-arrow">↓</span>
+</div>
+<div class="lane invoice" data-channel="invoice">
+<div class="lane-head">8. Fakturering &amp; afregning</div>
+<div class="lane-body">
+<div class="node" data-channel="clever" data-roles="finance">
+<button onclick="toggle('invoice1')"><span class="node-title">Clever</span><span class="node-sub">Samlefakturering</span></button>
+<div class="details" id="invoice1">
+<ul>
+<li>B2C-sager samlefaktureres én gang månedligt</li>
+<li>Reference og dokumentation kobles korrekt</li>
+<li>Afregning og rapportering følger partneropsætning</li>
+</ul>
+<div class="tagrow"><span class="tag finance">Økonomi / Administration</span></div>
+</div>
+</div>
+<div class="node" data-channel="andel" data-roles="finance">
+<button onclick="toggle('invoice2')"><span class="node-title">Andel</span><span class="node-sub">Løbende afregning</span></button>
+<div class="details" id="invoice2">
+<ul>
+<li>Fakturering følger Andels pris- og afregningsmodel</li>
+<li>Fakturering sker løbende efter afsluttede sager</li>
+<li>Korrekte referencer og bilag vedlægges</li>
+</ul>
+<div class="tagrow"><span class="tag finance">Økonomi / Administration</span></div>
+</div>
+</div>
+<div class="node" data-channel="watts" data-roles="finance">
+<button onclick="toggle('invoice3')"><span class="node-title">Watts</span><span class="node-sub">Efter Watts-struktur</span></button>
+<div class="details" id="invoice3">
+<ul>
+<li>Fakturering sker efter Watts' struktur</li>
+<li>Ordre-reference og dokumentation valideres</li>
+<li>Afregning følger samarbejdsmodellen</li>
+</ul>
+<div class="tagrow"><span class="tag finance">Økonomi / Administration</span></div>
+</div>
+</div>
+<div class="node" data-channel="sif" data-roles="finance">
+<button onclick="toggle('invoice4')"><span class="node-title">SIF-kunde</span><span class="node-sub">Direkte fakturering</span></button>
+<div class="details" id="invoice4">
+<ul>
+<li>Fakturering sker direkte til kunden</li>
+<li>Prisgrundlag og evt. tillæg kontrolleres</li>
+<li>Sagen afsluttes som vanligt i Navision</li>
+</ul>
+<div class="tagrow"><span class="tag finance">Økonomi / Administration</span></div>
+</div>
+</div>
+</div>
+</div>
+<p class="help">
+    Denne version kombinerer kanalsporene fra Flow.html med rollefiltrering og rolle-tags på hvert trin.
+  </p>
+</div>
+</body>
+</html>
