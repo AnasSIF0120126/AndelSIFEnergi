@@ -1,0 +1,1605 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elektrikeropgaver dashboard</title>
+<style>
+  body { margin:0; font-family: Arial, sans-serif; color:#1f2933; background:#f6f7f9; }
+  .layout { display:grid; grid-template-columns: 390px 1fr; min-height:100vh; }
+  aside { padding:16px; overflow:auto; border-right:1px solid #e5e7eb; background:#fafafa; }
+  main { padding:16px; overflow:auto; }
+  h1 { margin:0 0 8px 0; font-size:18px; }
+  h2 { margin:0 0 14px 0; font-size:18px; }
+  h3 { margin:18px 0 8px; font-size:16px; }
+  .muted { color:#667085; font-size:13px; line-height:1.45; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; align-items:center; }
+  button, input::file-selector-button, select {
+    border:1px solid #d0d5dd; background:white; border-radius:8px;
+    padding:9px 11px; cursor:pointer; font-size:13px;
+  }
+  select { min-width: 155px; max-width: 100%; }
+  button.secondary { background:#f9fafb; }
+  button.primary { background:#0f766e; color:white; border-color:#0f766e; }
+  input[type=file] { max-width: 100%; font-size: 13px; }
+  .filterBox, .card, .chartCard, .status {
+    background:white; border:1px solid #e5e7eb; border-radius:12px;
+  }
+  .filterBox { margin-top:14px; padding:12px; }
+  .filterTitle { font-size:13px; font-weight:700; margin:4px 0 8px; color:#344054; }
+  .sectionSpacer { height:12px; }
+  .status { margin: 12px 0; padding:10px; font-size:13px; line-height:1.4; }
+  .stat { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin:18px 0; }
+  .card { padding:8px; }
+  .num { font-size:18px; font-weight:700; }
+  .smallNum { font-size:14px; font-weight:700; }
+  .charts { display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:start; }
+  .chartCard { padding:8px; min-height:190px; max-height:260px; overflow:visible; }
+  .chartTitle { font-size:13px; font-weight:700; margin-bottom:6px; color:#344054; }
+  .wide { grid-column: 1 / -1; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; background:white; }
+  th, td { border-bottom:1px solid #eee; padding:8px 6px; text-align:left; vertical-align:top; }
+  th { color:#475467; font-weight:600; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:12px; }
+  
+  th.sortable {
+    cursor:pointer;
+    user-select:none;
+  }
+  th.sortable:hover {
+    background:#f3f4f6;
+  }
+
+
+  .detailOverlay {
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    padding:20px;
+  }
+  .detailOverlay.open { display:flex; }
+  .detailModal {
+    background:white;
+    border-radius:14px;
+    width:min(980px, 96vw);
+    max-height:88vh;
+    overflow:auto;
+    box-shadow:0 20px 50px rgba(15,23,42,0.25);
+    border:1px solid #e5e7eb;
+  }
+  .detailHeader {
+    position:sticky;
+    top:0;
+    background:white;
+    border-bottom:1px solid #e5e7eb;
+    padding:14px 16px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    z-index:1;
+  }
+  .detailHeader h3 { margin:0; }
+  .detailBody { padding:12px 16px 18px; }
+  .detailTable th { width:260px; background:#f9fafb; }
+  .clickHint { font-size:12px; color:#667085; margin-top:6px; }
+  tr.caseRow { cursor:pointer; }
+  tr.caseRow:hover { background:#f9fafb; }
+
+@media (max-width: 1000px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { border-right:0; border-bottom:1px solid #e5e7eb; }
+    .charts { grid-template-columns: 1fr; }
+  }
+
+  .dashboardMapCard {
+    background:white;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    overflow:hidden;
+    margin:10px 0 12px;
+  }
+  .dashboardMapHeader {
+    padding:9px 12px;
+    background:#f9fafb;
+    border-bottom:1px solid #e5e7eb;
+    color:#344054;
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:center;
+  }
+  #dashboardMap { width:100%; height:320px; min-height:320px; max-height:320px; }
+  .mapMiniStats {
+    font-size:12px;
+    color:#667085;
+    font-weight:400;
+  }
+
+  .mapHeaderActions {
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .mapMaximizeBtn {
+    border:1px solid #d0d5dd;
+    background:white;
+    border-radius:8px;
+    padding:5px 8px;
+    cursor:pointer;
+    font-size:12px;
+    line-height:1;
+  }
+
+  .mapMaximizeBtn.active {
+    background:#0f766e;
+    border-color:#0f766e;
+    color:white;
+  }
+
+  .mapFullscreenOverlay {
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:10000;
+    padding:18px;
+  }
+
+  .mapFullscreenOverlay.open { display:flex; }
+
+  .mapFullscreenCard {
+    width:min(1200px, 96vw);
+    height:88vh;
+    background:white;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+    box-shadow:0 20px 50px rgba(15,23,42,0.25);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .mapFullscreenCard .dashboardMapHeader { flex:0 0 auto; }
+
+  #dashboardMapFullscreen {
+    width:100%;
+    flex:1 1 auto;
+    min-height:0;
+  }
+
+  .sameHeightChart {
+    height:380px;
+    min-height:380px;
+    max-height:none;
+    padding:8px 8px 38px 8px;
+    box-sizing:border-box;
+  }
+
+  .combinedChartCard {
+    min-height:445px;
+  }
+
+  .combinedChartCard .chartTitle {
+    flex:0 0 auto;
+  }
+
+  .combinedChartCard canvas {
+    display:block;
+    width:100% !important;
+    height:100% !important;
+  }
+  .mapLegend {
+    background:white;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:7px 9px;
+    font-size:12px;
+    box-shadow:0 4px 14px rgba(15,23,42,.12);
+  }
+  .mapLegendRow { display:flex; align-items:center; gap:6px; margin:3px 0; }
+  .mapLegendDot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+
+  .mapChartRow {
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    align-items:start;
+    margin:10px 0 12px;
+  }
+
+  .halfWidthCard {
+    background:white;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  @media (max-width: 1100px) {
+    .mapChartRow {
+      grid-template-columns: 1fr;
+    }
+  }
+
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+</head>
+<body>
+<div class="layout">
+<aside>
+  <h1>Elektrikeropgaver</h1>
+  <p class="muted">Dashboard uden kort. Vælg Excel-filen her; DK kort bruger automatisk samme fil.</p>
+
+  <div class="toolbar">
+    <button id="loadSharePointBtn" class="primary" type="button">Genindlæs B2C.xlsx</button>
+    <button id="refreshBtn" type="button">Genindlæs data</button>
+    <input id="fileInput" type="file" accept=".xlsx,.xls">
+  </div>
+
+  <div class="filterBox">
+    <div class="filterTitle">Filtrer på opgave</div>
+    <div class="toolbar" style="margin:0;">
+      <select id="statusFilter" disabled><option value="">Alle status</option></select>
+      <select id="typeFilter" disabled><option value="">Alle typer</option></select>
+      <select id="ordretypeFilter" disabled><option value="">Alle ordretyper</option></select>
+      <button id="resetFiltersBtn" class="secondary" type="button" disabled>Nulstil</button>
+    </div>
+    <div id="filterInfo" class="muted" style="margin-top:8px;">Vælg Excel-filen først.</div>
+  </div>
+
+  <div id="status" class="status">Klar. Dashboardet forsøger automatisk at indlæse <strong>B2C.xlsx</strong> fra samme mappe som HTML-filen.</div>
+
+  <div class="stat">
+    <div class="card"><div class="muted">Sager vist</div><div id="total" class="num">0</div></div>
+    <div class="card"><div class="muted">Sager i alt</div><div id="allTotal" class="num">0</div></div>
+    <div class="card"><div class="muted">Oprettet denne måned</div><div id="createdThisMonth" class="num">0</div></div>
+    <div class="card"><div class="muted">Udført denne måned</div><div id="doneThisMonth" class="num">0</div></div>
+    <div class="card"><div class="muted">Mest brugte status</div><div id="topStatus" class="smallNum">-</div></div>
+    <div class="card"><div class="muted">Sidst opdateret</div><div id="updatedAt" class="smallNum">-</div></div>
+  </div>
+
+  <h3>Valgte filtre</h3>
+  <div id="activeFilters" class="card muted">Ingen filtre valgt.</div>
+  <div class="toolbar"><button id="clearChartFilterBtn" class="secondary" type="button">Ryd grafvalg</button></div>
+</aside>
+
+<main>
+  <h2>Udvikling de sidste 6 måneder</h2>
+  <p class="muted">Begge grafer bruger samme tidsskala: denne måned plus de sidste 5 måneder. Klik på en bjælke eller et punkt for at filtrere tabellen og KPI’erne.</p>
+
+  <div class="mapChartRow">
+    <div class="dashboardMapCard halfWidthCard">
+      <div class="dashboardMapHeader">
+        <span>DK kort</span>
+        <span class="mapHeaderActions">
+          <span id="mapMiniStats" class="mapMiniStats">Vælg Excel-fil</span>
+          <button id="toggleHeatMapBtn" class="mapMaximizeBtn" type="button" title="Vis/skjul heatmap">Heat</button>
+          <button id="maximizeMapBtn" class="mapMaximizeBtn" type="button" title="Maksimer kort">Maksimer</button>
+        </span>
+      </div>
+      <div id="dashboardMap"></div>
+    </div>
+
+    <div class="chartCard halfWidthCard combinedChartCard">
+      <div class="chartTitle">Oprettet vs. udført</div>
+      <div class="sameHeightChart">
+        <canvas id="combinedChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chartCard">
+      <div class="chartTitle">Antal sager oprettet pr. måned</div>
+      <canvas id="createdChart" height="115"></canvas>
+    </div>
+
+    <div class="chartCard">
+      <div class="chartTitle">Antal sager udført pr. måned</div>
+      <canvas id="doneChart" height="115"></canvas>
+    </div>
+
+
+    <div class="chartCard">
+      <div class="chartTitle">Fordeling på status</div>
+      <canvas id="statusChart" height="115"></canvas>
+    </div>
+
+    <div class="chartCard">
+      <div class="chartTitle">Fordeling på ordretype</div>
+      <canvas id="ordretypeChart" height="115"></canvas>
+    </div>
+  </div>
+
+  <h3>Alle viste sager</h3>
+  <div id="allCasesTable"></div>
+</main>
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// SHAREPOINT OPSÆTNING
+// Indsæt SharePoint download-link her, hvis dashboardet skal hente data automatisk.
+const EXCEL_SHAREPOINT_URL = "";
+const AUTO_REFRESH_MS = 300000; // 5 minutter
+
+let allRows = [];
+let sharedExcelBufferForMap = null;
+let sharedExcelFileNameForMap = "";
+let lastLoadMode = null;
+
+let executionDateKey = null;
+let createdDateKey = null;
+let statusKey = null;
+let typeKey = null;
+let ordretypeKey = null;
+
+let createdChart = null;
+let doneChart = null;
+let combinedChart = null;
+let statusChart = null;
+let ordretypeChart = null;
+let chartClickFilter = null;
+let currentAllCasesRows = [];
+
+const monthNames = ['Januar','Februar','Marts','April','Maj','Juni','Juli','August','September','Oktober','November','December'];
+
+function normKey(s) { return String(s || '').toLowerCase().replace(/[\s_.,;:()\/-]+/g,''); }
+function cleanValue(v) { return String(v ?? '').trim(); }
+function htmlEscape(s) { return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
+function get(row, names) {
+  const keys = Object.keys(row);
+  for (const name of names) {
+    const n = normKey(name);
+    const k = keys.find(x => normKey(x) === n);
+    if (k) return row[k];
+  }
+  return '';
+}
+
+function findColumnKey(rows, names) {
+  if (!rows.length) return null;
+  const keys = Object.keys(rows[0]);
+
+  for (const name of names) {
+    const wanted = normKey(name);
+    const key = keys.find(k => normKey(k) === wanted);
+    if (key) return key;
+  }
+
+  for (const name of names) {
+    const wanted = normKey(name);
+    const key = keys.find(k => {
+      const current = normKey(k);
+      return current.includes(wanted) || wanted.includes(current);
+    });
+    if (key) return key;
+  }
+
+  return null;
+}
+
+function parseExcelDate(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date && !isNaN(value)) return value;
+
+  if (typeof value === 'number' && value > 20000 && value < 80000) {
+    const utcDays = Math.floor(value - 25569);
+    const utcValue = utcDays * 86400;
+    const d = new Date(utcValue * 1000);
+    return isNaN(d) ? null : d;
+  }
+
+  const s = String(value).trim();
+  if (!s) return null;
+
+  let d = new Date(s);
+  if (!isNaN(d)) return d;
+
+  let m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})$/);
+  if (m) {
+    let year = +m[3];
+    if (year < 100) year += 2000;
+    d = new Date(year, +m[2]-1, +m[1]);
+    return isNaN(d) ? null : d;
+  }
+
+  return null;
+}
+
+function findBestDateKey(rows, preferred) {
+  if (!rows.length) return null;
+  const keys = Object.keys(rows[0]);
+
+  for (const name of preferred) {
+    const key = keys.find(k => normKey(k) === normKey(name));
+    if (key && rows.some(r => parseExcelDate(r[key]))) return key;
+  }
+
+  let best = null, bestScore = 0;
+  for (const key of keys) {
+    let score = 0;
+    for (const row of rows.slice(0, 250)) if (parseExcelDate(row[key])) score++;
+    if (score > bestScore) { bestScore = score; best = key; }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+function getExecutionDate(row) { return executionDateKey ? parseExcelDate(row[executionDateKey]) : null; }
+function getCreatedDate(row) { return createdDateKey ? parseExcelDate(row[createdDateKey]) : null; }
+function getStatus(row) { return cleanValue(statusKey ? row[statusKey] : get(row, ['Status','Staus'])); }
+function getType(row) { return cleanValue(typeKey ? row[typeKey] : get(row, ['Type'])); }
+function getOrdretype(row) { return cleanValue(ordretypeKey ? row[ordretypeKey] : get(row, ['Ordretype (Installation)','Ordretype','Ordre type'])); }
+
+function getCity(row) {
+  return cleanValue(get(row, [
+    'By',
+    'Postnummer og by',
+    'Postnr og by',
+    'Bynavn',
+    'Postby',
+    'City',
+    'Adresse by',
+    'Kunde by',
+    'Installationsby',
+    'Postdistrikt'
+  ]));
+}
+
+function getPostalCode(row) {
+  return cleanValue(get(row, [
+    'Postnummer',
+    'Postnr',
+    'Post nr',
+    'Zip',
+    'Zipcode',
+    'Postal code'
+  ]));
+}
+
+function getChanged(row) {
+  return cleanValue(get(row, [
+    'Ændret',
+    'Changed',
+    'Sidst ændret',
+    'Modified'
+  ]));
+}
+
+function getChangedByElectrician(row) {
+  return cleanValue(get(row, [
+    'Ændret af elektriker',
+    'Changed by electrician',
+    'Elektriker',
+    'Montør'
+  ]));
+}
+
+function getPortalComment(row) {
+  return cleanValue(get(row, [
+    'Kommentar fra portal',
+    'Portal kommentar',
+    'Kommentar',
+    'Comment from portal'
+  ]));
+}
+
+
+function getElectricianTaskComment(row) {
+  return cleanValue(get(row, [
+    'Kommentar til elektrikeropgave',
+    'Kommentar til elektriker opgave',
+    'Elektriker kommentar',
+    'Kommentar elektriker',
+    'Electrician task comment'
+  ]));
+}
+
+
+function getElectricianCaseNumber(row) {
+  return cleanValue(get(row, [
+    'Elektriker sags.nr',
+    'Elektriker sagsnr',
+    'Elektriker sag',
+    'Montør sags.nr'
+  ]));
+}
+
+
+function getCity(row) { return cleanValue(get(row, ['By','Postby','Bynavn','City'])); }
+
+function isAwaitingExecutionDate(row) {
+  return getStatus(row).toLowerCase() === 'afventer udførelsesdato';
+}
+
+function setStatus(text) { document.getElementById('status').innerHTML = text; }
+
+function parseWorkbook(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, {type:'array', cellDates:true});
+  const sheetName = wb.SheetNames.includes('Adresser') ? 'Adresser' : wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:'', raw:true});
+  return rows.filter(r => Object.values(r).some(v => String(v).trim() !== ''));
+}
+
+function fillSelect(id, values, defaultLabel) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  sel.add(new Option(defaultLabel, ''));
+  [...values].filter(v => cleanValue(v) !== '').sort((a,b) => String(a).localeCompare(String(b), 'da')).forEach(v => sel.add(new Option(v, v)));
+  sel.disabled = values.size === 0;
+}
+
+function populateFilters(rows) {
+  const statusSet = new Set();
+  const typeSet = new Set();
+  const ordreSet = new Set();
+
+  createdDateKey = findBestDateKey(rows, ['Oprettet','Created','Creation date']);
+  executionDateKey = findBestDateKey(rows, ['Udførselsdato','Udførelsesdato','Udført dato','Udført','Execution date','Completion date']);
+  statusKey = findColumnKey(rows, ['Status','Staus']);
+  typeKey = findColumnKey(rows, ['Type']);
+  ordretypeKey = findColumnKey(rows, ['Ordretype (Installation)','Ordretype','Ordre type']);
+
+  rows.forEach(row => {
+    const status = getStatus(row);
+    const type = getType(row);
+    const ordretype = getOrdretype(row);
+    if (status) statusSet.add(status);
+    if (type) typeSet.add(type);
+    if (ordretype) ordreSet.add(ordretype);
+  });
+
+  fillSelect('statusFilter', statusSet, 'Alle status');
+  fillSelect('typeFilter', typeSet, 'Alle typer');
+  fillSelect('ordretypeFilter', ordreSet, 'Alle ordretyper');
+
+  const anyFilters = statusSet.size || typeSet.size || ordreSet.size;
+  document.getElementById('resetFiltersBtn').disabled = !anyFilters;
+
+  const found = [];
+  if (createdDateKey) found.push(`oprettet: <strong>${htmlEscape(createdDateKey)}</strong>`);
+  if (executionDateKey) found.push(`udført: <strong>${htmlEscape(executionDateKey)}</strong>`);
+  if (statusKey) found.push(`status: <strong>${htmlEscape(statusKey)}</strong>`);
+  if (typeKey) found.push(`type: <strong>${htmlEscape(typeKey)}</strong>`);
+  if (ordretypeKey) found.push(`ordretype: <strong>${htmlEscape(ordretypeKey)}</strong>`);
+
+  document.getElementById('filterInfo').innerHTML = found.length
+    ? `Fundet i Excel: ${found.join(', ')}.`
+    : 'Jeg kunne ikke finde filterkolonner i Excel-filen.';
+}
+
+function monthKey(date) {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+}
+
+function lastSixMonthKeys() {
+  const now = new Date();
+  const keys = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    keys.push(monthKey(d));
+  }
+  return keys;
+}
+
+function monthLabel(key) {
+  const parts = key.split('-');
+  const y = parts[0];
+  const m = Number(parts[1]);
+  return monthNames[m - 1].slice(0,3) + ' ' + y;
+}
+
+function statusColor(status, index=0) {
+  const colors = ['#2563eb','#16a34a','#f97316','#dc2626','#7c3aed','#0891b2','#ca8a04','#be123c','#4b5563','#0f766e'];
+  return colors[index % colors.length];
+}
+
+function currentFilterText() {
+      const status = document.getElementById('statusFilter').value;
+  const type = document.getElementById('typeFilter').value;
+  const ordretype = document.getElementById('ordretypeFilter').value;
+  const parts = [];
+  if (status) parts.push('Status: ' + status);
+  if (type) parts.push('Type: ' + type);
+  if (ordretype) parts.push('Ordretype: ' + ordretype);
+      return parts;
+}
+
+
+function clearChartClickFilter() {
+  chartClickFilter = null;
+}
+
+function setMonthFilterFromChart(monthKeyValue, dateType) {
+  chartClickFilter = { kind:'month', key: monthKeyValue, dateType: dateType };
+  renderDashboard(getBaseFilteredRows());
+}
+
+function setValueFilterFromChart(kind, value) {
+  chartClickFilter = { kind: kind, value: value };
+  renderDashboard(getBaseFilteredRows());
+}
+
+function rowMatchesChartClick(row) {
+  if (!chartClickFilter) return true;
+
+  if (chartClickFilter.kind === 'month') {
+    const d = chartClickFilter.dateType === 'created' ? getCreatedDate(row) : getExecutionDate(row);
+    return d && monthKey(d) === chartClickFilter.key;
+  }
+
+  if (chartClickFilter.kind === 'status') {
+    return getStatus(row) === chartClickFilter.value;
+  }
+
+  if (chartClickFilter.kind === 'ordretype') {
+    return getOrdretype(row) === chartClickFilter.value;
+  }
+
+  return true;
+}
+
+function getBaseFilteredRows() {
+      const status = document.getElementById('statusFilter').value;
+  const type = document.getElementById('typeFilter').value;
+  const ordretype = document.getElementById('ordretypeFilter').value;
+
+  return allRows.filter(row => {
+    const statusOk = !status || getStatus(row) === status;
+    const typeOk = !type || getType(row) === type;
+    const ordreOk = !ordretype || getOrdretype(row) === ordretype;
+    return statusOk && typeOk && ordreOk;
+  });
+}
+
+
+function applyFilters() {
+  clearChartClickFilter();
+  renderDashboard(getBaseFilteredRows());
+}
+
+function countBy(rows, getter) {
+  const map = new Map();
+  rows.forEach(row => {
+    const key = getter(row) || 'Ukendt';
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return map;
+}
+
+function createOrUpdateChart(existing, canvasId, config) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return existing;
+  if (existing) existing.destroy();
+  return new Chart(ctx, config);
+}
+
+function renderDashboard(rows) {
+  rows = rows.filter(rowMatchesChartClick);
+  const fixedMonthKeys = lastSixMonthKeys();
+  const labels = fixedMonthKeys.map(key => monthLabel(key));
+
+  const createdCounts = new Map();
+  const doneCounts = new Map();
+  const statusCounts = countBy(rows, getStatus);
+  const ordreCounts = countBy(rows, getOrdretype);
+
+  rows.forEach(row => {
+    const created = getCreatedDate(row);
+    if (created) {
+      const key = monthKey(created);
+      createdCounts.set(key, (createdCounts.get(key) || 0) + 1);
+    }
+
+    const done = getExecutionDate(row);
+    if (done) {
+      const key = monthKey(done);
+      doneCounts.set(key, (doneCounts.get(key) || 0) + 1);
+    }
+  });
+
+  const createdData = fixedMonthKeys.map(key => createdCounts.get(key) || 0);
+  const doneData = fixedMonthKeys.map(key => doneCounts.get(key) || 0);
+  const thisMonthKey = fixedMonthKeys[fixedMonthKeys.length - 1];
+
+  document.getElementById('total').textContent = rows.length.toLocaleString('da-DK');
+  document.getElementById('allTotal').textContent = allRows.length.toLocaleString('da-DK');
+  document.getElementById('createdThisMonth').textContent = (createdCounts.get(thisMonthKey) || 0).toLocaleString('da-DK');
+  document.getElementById('doneThisMonth').textContent = (doneCounts.get(thisMonthKey) || 0).toLocaleString('da-DK');
+
+  const topStatus = [...statusCounts.entries()].sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('topStatus').textContent = topStatus ? `${topStatus[0]} (${topStatus[1]})` : '-';
+  document.getElementById('updatedAt').textContent = new Date().toLocaleTimeString('da-DK', {hour:'2-digit', minute:'2-digit'});
+
+  const filters = currentFilterText();
+  const clickFilterText = chartClickFilter
+    ? (chartClickFilter.kind === 'month'
+        ? (chartClickFilter.dateType === 'created' ? 'Oprettet: ' : 'Udført: ') + monthLabel(chartClickFilter.key)
+        : (chartClickFilter.kind === 'status' ? 'Status: ' : 'Ordretype: ') + chartClickFilter.value)
+    : '';
+
+  const allFilterTexts = [...filters];
+  if (clickFilterText) allFilterTexts.push('Grafvalg: ' + clickFilterText);
+
+  document.getElementById('activeFilters').innerHTML = allFilterTexts.length
+    ? allFilterTexts.map(f => `<span class="pill">${htmlEscape(f)}</span>`).join(' ')
+    : 'Ingen filtre valgt.';
+
+  createdChart = createOrUpdateChart(createdChart, 'createdChart', {
+    type: 'line',
+    data: { labels, datasets: [{ label:'Oprettede sager', data:createdData, tension:0.25 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+  });
+
+  doneChart = createOrUpdateChart(doneChart, 'doneChart', {
+    type: 'line',
+    data: { labels, datasets: [{ label:'Udførte sager', data:doneData, tension:0.25 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}} }
+  });
+
+  combinedChart = createOrUpdateChart(combinedChart, 'combinedChart', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Oprettet', data:createdData },
+        { label:'Udført', data:doneData }
+      ]
+    },
+    options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        layout:{ padding:{ top:8, right:8, bottom:44, left:8 } },
+        onClick: (evt, elements) => {
+          if (elements.length) {
+            const element = elements[0];
+            const dateType = element.datasetIndex === 0 ? 'created' : 'done';
+            setMonthFilterFromChart(fixedMonthKeys[element.index], dateType);
+          }
+        },
+        scales:{
+          x:{
+            display:true,
+            offset:true,
+            ticks:{
+              display:true,
+              autoSkip:false,
+              maxRotation:0,
+              minRotation:0,
+              font:{size:11},
+              padding:10
+            }
+          },
+          y:{
+            beginAtZero:true,
+            ticks:{precision:0}
+          }
+        }
+      }
+  });
+
+  const statusEntries = [...statusCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);
+  statusChart = createOrUpdateChart(statusChart, 'statusChart', {
+    type: 'bar',
+    data: {
+      labels: statusEntries.map(([k])=>k),
+      datasets: [{ label:'Antal', data: statusEntries.map(([,v])=>v), backgroundColor: statusEntries.map((_,i)=>statusColor('', i)) }]
+    },
+    options: {
+        indexAxis:'y',
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        onClick: (evt, elements) => {
+          if (elements.length) setValueFilterFromChart('status', statusEntries[elements[0].index][0]);
+        },
+        scales:{x:{beginAtZero:true, ticks:{precision:0}}}
+      }
+  });
+
+  const ordreEntries = [...ordreCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);
+  ordretypeChart = createOrUpdateChart(ordretypeChart, 'ordretypeChart', {
+    type: 'bar',
+    data: {
+      labels: ordreEntries.map(([k])=>k),
+      datasets: [{ label:'Antal', data: ordreEntries.map(([,v])=>v), backgroundColor: ordreEntries.map((_,i)=>statusColor('', i+2)) }]
+    },
+    options: {
+        indexAxis:'y',
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        onClick: (evt, elements) => {
+          if (elements.length) setValueFilterFromChart('ordretype', ordreEntries[elements[0].index][0]);
+        },
+        scales:{x:{beginAtZero:true, ticks:{precision:0}}}
+      }
+  });
+
+  renderAllCasesTable(rows);
+  renderEmbeddedMap(rows);
+
+  const filterText = filters.join(' / ');
+  setStatus(`Indlæst ${allRows.length.toLocaleString('da-DK')} rækker. Viser ${rows.length.toLocaleString('da-DK')} rækker${filterText ? ' for ' + htmlEscape(filterText) : ''}.`);
+}
+
+
+
+
+function formatDetailValue(value, key='') {
+  const keyNorm = normKey(key);
+
+  const looksLikeDateField =
+    keyNorm.includes('dato') ||
+    keyNorm.includes('date') ||
+    keyNorm.includes('created') ||
+    keyNorm.includes('ændret') ||
+    keyNorm.includes('changed') ||
+    keyNorm.includes('udført') ||
+    keyNorm.includes('execution');
+
+  if (looksLikeDateField) {
+    const d = parseExcelDate(value);
+    if (d) return d.toLocaleDateString('da-DK');
+  }
+
+  return cleanValue(value);
+}
+
+function openCaseDetail(index) {
+  const row = currentAllCasesRows[index];
+  if (!row) return;
+
+  const sag = get(row, ['Sagsnummer','Sag','Sag nr','Sagsnr']) || 'Sagsdetaljer';
+  document.getElementById('caseDetailTitle').textContent = 'Sag ' + sag;
+
+  const entries = Object.keys(row).map(key => {
+    const value = formatDetailValue(row[key], key);
+    return `<tr><th>${htmlEscape(key)}</th><td>${htmlEscape(value)}</td></tr>`;
+  }).join('');
+
+  document.getElementById('caseDetailBody').innerHTML =
+    '<table class="detailTable"><tbody>' + entries + '</tbody></table>';
+
+  document.getElementById('caseDetailOverlay').classList.add('open');
+}
+
+function closeCaseDetail(event) {
+  if (event && event.target && event.target.id !== 'caseDetailOverlay') return;
+  document.getElementById('caseDetailOverlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    closeCaseDetail();
+    closeMapFullscreen();
+  }
+});
+
+
+function renderAllCasesTable(rows) {
+  if (!window.allCasesSort) {
+    window.allCasesSort = { column: 5, asc: false };
+  }
+
+  const data = [...rows].map(row => {
+    const created = getCreatedDate(row);
+    const execution = getExecutionDate(row);
+
+    let daysDiff = '';
+    if (created && execution) {
+      const diffMs = execution - created;
+      daysDiff = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    return {
+      originalRow: row,
+      sag: get(row, ['Sagsnummer','Sag','Sag nr','Sagsnr']) || '',
+      city: (getPostalCode(row) + ' ' + (get(row, ['Postnummer og by', 'Postnr og by']) || getCity(row))).trim(),
+      type: getType(row),
+      ordretype: getOrdretype(row),
+      created: created,
+      createdText: created ? created.toLocaleDateString('da-DK') : '',
+      execution: execution,
+      executionText: execution ? execution.toLocaleDateString('da-DK') : '',
+      daysDiff: daysDiff,
+      comment: getElectricianTaskComment(row),
+      status: getStatus(row)
+    };
+  });
+
+  const sort = window.allCasesSort;
+
+  data.sort((a,b) => {
+    const valuesA = [
+      a.sag,
+      a.city,
+      a.type,
+      a.ordretype,
+      a.created || new Date(0),
+      a.execution || new Date(0),
+      a.daysDiff === '' ? -999999 : a.daysDiff,
+      a.comment,
+      a.status
+    ];
+
+    const valuesB = [
+      b.sag,
+      b.city,
+      b.type,
+      b.ordretype,
+      b.created || new Date(0),
+      b.execution || new Date(0),
+      b.daysDiff === '' ? -999999 : b.daysDiff,
+      b.comment,
+      b.status
+    ];
+
+    let va = valuesA[sort.column];
+    let vb = valuesB[sort.column];
+
+    if (typeof va === 'number' && typeof vb === 'number') {
+      return sort.asc ? va - vb : vb - va;
+    }
+
+    if (va instanceof Date && vb instanceof Date) {
+      return sort.asc ? va - vb : vb - va;
+    }
+
+    va = String(va).toLowerCase();
+    vb = String(vb).toLowerCase();
+
+    return sort.asc
+      ? va.localeCompare(vb, 'da')
+      : vb.localeCompare(va, 'da');
+  });
+
+  currentAllCasesRows = data.map(item => item.originalRow);
+
+  const headers = [
+    'Sagsnr.',
+    'Postnr. / By',
+    'Type',
+    'Ordretype',
+    'Oprettet',
+    'Udførelsesdato',
+    'Dage',
+    'Kommentar til elektrikeropgave',
+    'Status'
+  ];
+
+  const headerHtml = headers.map((h, i) => {
+    const arrow = sort.column === i ? (sort.asc ? ' ▲' : ' ▼') : '';
+    return `<th class="sortable" onclick="sortAllCasesTable(${i})">${h}${arrow}</th>`;
+  }).join('');
+
+  const htmlRows = data.map((row, index) => `
+    <tr class="caseRow" ondblclick="openCaseDetail(${index})" title="Dobbeltklik for at se alle detaljer">
+      <td>${htmlEscape(row.sag)}</td>
+      <td>${htmlEscape(row.city)}</td>
+      <td>${htmlEscape(row.type)}</td>
+      <td>${htmlEscape(row.ordretype)}</td>
+      <td>${htmlEscape(row.createdText)}</td>
+      <td>${htmlEscape(row.executionText)}</td>
+      <td>${htmlEscape(row.daysDiff)}</td>
+      <td>${htmlEscape(row.comment)}</td>
+      <td>${htmlEscape(row.status)}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('allCasesTable').innerHTML =
+    '<div class="clickHint">Dobbeltklik på en sag for at se alle oplysninger fra Excel-filen.</div>' +
+    '<table><thead><tr>' + headerHtml + '</tr></thead><tbody>' +
+    htmlRows +
+    '</tbody></table>';
+}
+
+function sortAllCasesTable(column) {
+  if (!window.allCasesSort) {
+    window.allCasesSort = { column: column, asc: true };
+  } else if (window.allCasesSort.column === column) {
+    window.allCasesSort.asc = !window.allCasesSort.asc;
+  } else {
+    window.allCasesSort.column = column;
+    window.allCasesSort.asc = true;
+  }
+
+  renderAllCasesTable(getBaseFilteredRows().filter(rowMatchesChartClick));
+}
+
+
+async function loadArrayBuffer(buf, sourceText) {
+  sharedExcelBufferForMap = buf.slice(0);
+  sharedExcelFileNameForMap = localStorage.getItem("sharedExcelFileNameFallback") || sharedExcelFileNameForMap || "valgt Excel-fil";
+  allRows = parseWorkbook(buf);
+  populateFilters(allRows);
+  ['statusFilter','typeFilter','ordretypeFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  clearChartClickFilter();
+  lastLoadMode = sourceText;
+  renderDashboard(getBaseFilteredRows());
+}
+
+function normalizeSharePointUrl(url) {
+  if (!url) return '';
+  let u = String(url).trim();
+  if (!u) return '';
+  if (u.includes('?web=1')) u = u.replace('?web=1', '?download=1');
+  if (!u.includes('?') && u.toLowerCase().endsWith('.xlsx')) u += '?download=1';
+  return u;
+}
+
+
+const SHARED_DB_NAME = 'sifElektrikerDashboard';
+const SHARED_DB_STORE = 'files';
+const SHARED_DB_KEY = 'sharedExcel';
+
+function openSharedDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SHARED_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(SHARED_DB_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveSharedExcel(file) {
+  const buf = await file.arrayBuffer();
+  sharedExcelBufferForMap = buf.slice(0);
+  sharedExcelFileNameForMap = file.name;
+  localStorage.setItem('sharedExcelFileNameFallback', file.name);
+  const db = await openSharedDb();
+
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(SHARED_DB_STORE, 'readwrite');
+    tx.objectStore(SHARED_DB_STORE).put({
+      name: file.name,
+      type: file.type,
+      lastModified: file.lastModified,
+      savedAt: new Date().toISOString(),
+      buffer: buf
+    }, SHARED_DB_KEY);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+
+  db.close();
+  return buf;
+}
+
+async function loadSharedExcel() {
+  try {
+    const db = await openSharedDb();
+    const record = await new Promise((resolve, reject) => {
+      const tx = db.transaction(SHARED_DB_STORE, 'readonly');
+      const request = tx.objectStore(SHARED_DB_STORE).get(SHARED_DB_KEY);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+
+    if (!record || !record.buffer) return false;
+
+    await loadArrayBuffer(record.buffer, 'shared');
+    setStatus('Fælles Excel-fil indlæst: <strong>' + htmlEscape(record.name || '') + '</strong>');
+    return true;
+  } catch (err) {
+    console.error(err);
+    setStatus('Kunne ikke indlæse den fælles Excel-fil fra browseren.<br><span class="muted">Vælg Excel-filen igen i dashboardet.</span>');
+    return false;
+  }
+}
+
+
+function openDKKort() {
+  if (!sharedExcelBufferForMap) {
+    setStatus('Vælg Excel-filen først. Derefter kan DK kort åbnes med samme fil.');
+    return;
+  }
+
+  const mapWindow = window.open('DK_kort_opdateret_v3.html', '_blank');
+
+  if (!mapWindow) {
+    setStatus('Browseren blokerede åbning af DK kort. Tillad popups, og prøv igen.');
+    return;
+  }
+
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    const payload = {
+      type: 'SIF_SHARED_EXCEL',
+      name: sharedExcelFileNameForMap || localStorage.getItem('sharedExcelFileNameFallback') || 'valgt Excel-fil',
+      buffer: sharedExcelBufferForMap.slice(0)
+    };
+
+    try {
+      mapWindow.postMessage(payload, '*', [payload.buffer]);
+    } catch (err) {
+      try { mapWindow.postMessage(payload, '*'); } catch (e) {}
+    }
+
+    if (attempts >= 25) clearInterval(timer);
+  }, 400);
+
+  setStatus(document.getElementById('status').innerHTML + '<br><span class="muted">DK kort åbnes og modtager den valgte Excel-fil fra dashboardet.</span>');
+}
+
+async function loadExcelFromSharePoint() {
+  const url = normalizeSharePointUrl(EXCEL_SHAREPOINT_URL);
+  if (!url) {
+    setStatus('Der mangler SharePoint-link. Vælg Excel-filen manuelt, eller indsæt linket i <strong>EXCEL_SHAREPOINT_URL</strong>.');
+    return;
+  }
+
+  try {
+    setStatus('Henter B2C.xlsx...');
+    const res = await fetch(url, { cache:'no-store', credentials:'include' });
+    if (!res.ok) throw new Error('SharePoint svarede ' + res.status + ' ' + res.statusText);
+    const buf = await res.arrayBuffer();
+    await loadArrayBuffer(buf, 'sharepoint');
+  } catch (err) {
+    setStatus('Kunne ikke hente Excel automatisk fra SharePoint. Brug filvælgeren som fallback.<br><span class="muted">Fejl: ' + htmlEscape(err.message) + '</span>');
+  }
+}
+
+document.getElementById('loadSharePointBtn').addEventListener('click', loadExcelFromSharePoint);
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  if (lastLoadMode === 'manual') {
+    setStatus('Du har indlæst via manuel filvalg. Vælg Excel-filen igen for at opdatere.');
+  } else {
+    loadExcelFromSharePoint();
+  }
+});
+
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setStatus('Læser valgt Excel-fil...');
+  const sharedBuf = await saveSharedExcel(file);
+  await loadArrayBuffer(sharedBuf, 'manual');
+});
+
+['statusFilter','typeFilter','ordretypeFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+
+document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+  ['statusFilter','typeFilter','ordretypeFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  clearChartClickFilter();
+  renderDashboard(getBaseFilteredRows());
+});
+
+document.getElementById('clearChartFilterBtn').addEventListener('click', () => {
+  clearChartClickFilter();
+  renderDashboard(getBaseFilteredRows());
+});
+
+window.addEventListener('load', async () => {
+  const loaded = await loadSharedExcel();
+  if (!loaded && EXCEL_SHAREPOINT_URL) {
+    loadExcelFromSharePoint();
+    if (AUTO_REFRESH_MS > 0) setInterval(loadExcelFromSharePoint, AUTO_REFRESH_MS);
+  }
+});
+
+// ---------- Integreret DK kort, bruger samme filtrerede rækker som dashboardet ----------
+let dashboardLeafletMap = null;
+let dashboardMapMarkers = null;
+let dashboardMapHeatLayer = null;
+let dashboardFullscreenMap = null;
+let dashboardFullscreenMarkers = null;
+let dashboardFullscreenHeatLayer = null;
+let latestMapRows = [];
+let latestMapHeatPoints = [];
+let dashboardHeatMapEnabled = false;
+let dashboardPostcodesCache = null;
+
+const POSTCODE_FALLBACK = new Map([
+  ['1000',{lat:55.6761,lon:12.5683}], ['2000',{lat:55.6818,lon:12.5326}], ['2300',{lat:55.6300,lon:12.5850}],
+  ['2800',{lat:55.7700,lon:12.5000}], ['3000',{lat:56.0361,lon:12.6136}], ['3400',{lat:55.9300,lon:12.3000}],
+  ['4000',{lat:55.6419,lon:12.0878}], ['4200',{lat:55.4038,lon:11.3546}], ['4300',{lat:55.7170,lon:11.7160}],
+  ['4400',{lat:55.6795,lon:11.0886}], ['4600',{lat:55.4580,lon:12.1821}], ['4700',{lat:55.2299,lon:11.7609}],
+  ['4800',{lat:54.7650,lon:11.8750}], ['4900',{lat:54.8350,lon:11.1350}], ['5000',{lat:55.4038,lon:10.4024}],
+  ['5200',{lat:55.3900,lon:10.3800}], ['5250',{lat:55.3600,lon:10.3300}], ['5300',{lat:55.4900,lon:10.6600}],
+  ['5400',{lat:55.5667,lon:10.0883}], ['5500',{lat:55.5050,lon:9.7300}], ['5600',{lat:55.0950,lon:10.2423}],
+  ['5700',{lat:55.0598,lon:10.6068}], ['5800',{lat:55.3127,lon:10.7896}], ['6000',{lat:55.4904,lon:9.4722}],
+  ['6100',{lat:55.2494,lon:9.4870}], ['6200',{lat:55.0400,lon:9.4200}], ['6300',{lat:54.9100,lon:9.7900}],
+  ['6400',{lat:54.9138,lon:9.7922}], ['6500',{lat:55.2500,lon:9.3000}], ['6600',{lat:55.4800,lon:9.1300}],
+  ['6700',{lat:55.4765,lon:8.4594}], ['6800',{lat:55.7093,lon:8.5380}], ['6900',{lat:56.0881,lon:8.2576}],
+  ['7000',{lat:55.5657,lon:9.7564}], ['7100',{lat:55.7113,lon:9.5364}], ['7200',{lat:55.7530,lon:9.4197}],
+  ['7300',{lat:55.8700,lon:9.8700}], ['7400',{lat:56.1362,lon:8.9766}], ['7500',{lat:56.3600,lon:8.6200}],
+  ['7600',{lat:56.5500,lon:8.3100}], ['7700',{lat:56.9560,lon:8.6940}], ['7800',{lat:56.5660,lon:9.0300}],
+  ['7900',{lat:56.7930,lon:8.8600}], ['8000',{lat:56.1629,lon:10.2039}], ['8200',{lat:56.1700,lon:10.1900}],
+  ['8300',{lat:56.0300,lon:10.2500}], ['8400',{lat:56.4660,lon:10.0360}], ['8500',{lat:56.4120,lon:10.8780}],
+  ['8600',{lat:56.1697,lon:9.5451}], ['8700',{lat:55.8607,lon:9.8503}], ['8800',{lat:56.4520,lon:9.4020}],
+  ['8900',{lat:56.4600,lon:10.0400}], ['9000',{lat:57.0488,lon:9.9217}], ['9200',{lat:57.0300,lon:9.8800}],
+  ['9300',{lat:57.3300,lon:10.5200}], ['9400',{lat:57.0500,lon:9.9200}], ['9500',{lat:56.6400,lon:9.7900}],
+  ['9600',{lat:56.8000,lon:9.3500}], ['9700',{lat:57.2700,lon:9.9400}], ['9800',{lat:57.4640,lon:9.9820}],
+  ['9900',{lat:57.4400,lon:10.5400}]
+]);
+
+function initDashboardMap() {
+  const el = document.getElementById('dashboardMap');
+  if (!el || dashboardLeafletMap || typeof L === 'undefined') return;
+
+  const dkBounds = L.latLngBounds(
+    [54.4, 7.8],
+    [57.9, 15.5]
+  );
+
+  dashboardLeafletMap = L.map('dashboardMap', {
+    zoomControl:true,
+    minZoom:6,
+    maxBounds: dkBounds,
+    maxBoundsViscosity: 1.0
+  }).setView([56.05, 10.6], 6);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:18,
+    noWrap:true,
+    bounds: dkBounds,
+    attribution:'&copy; OpenStreetMap'
+  }).addTo(dashboardLeafletMap);
+
+  dashboardMapMarkers = L.markerClusterGroup({ chunkedLoading:true, maxClusterRadius:42 });
+  dashboardMapHeatLayer = L.heatLayer([], {
+    // Ekstra detaljeret heatmap: mindre radius/blur og lavere intensitet,
+    // så hotspots bliver mere lokale omkring postnumre/byer.
+    radius:8,
+    blur:5,
+    maxZoom:15,
+    max:1.0,
+    minOpacity:0.04,
+    gradient:{0.10:'#2c7bb6',0.32:'#abd9e9',0.55:'#ffffbf',0.78:'#fdae61',0.98:'#d7191c'}
+  });
+  dashboardLeafletMap.addLayer(dashboardMapMarkers);
+
+  const legend = L.control({position:'bottomleft'});
+  legend.onAdd = function() {
+    const div = L.DomUtil.create('div', 'mapLegend');
+    div.innerHTML =
+      '<div class="mapLegendRow"><span class="mapLegendDot" style="background:#16a34a"></span>Afsluttet/udført</div>' +
+      '<div class="mapLegendRow"><span class="mapLegendDot" style="background:#f97316"></span>Afventer</div>' +
+      '<div class="mapLegendRow"><span class="mapLegendDot" style="background:#dc2626"></span>Annulleret/aflyst</div>' +
+      '<div class="mapLegendRow"><span class="mapLegendDot" style="background:#0f766e"></span>Øvrige</div>';
+    return div;
+  };
+  legend.addTo(dashboardLeafletMap);
+
+  setTimeout(() => dashboardLeafletMap.invalidateSize(), 250);
+}
+
+async function loadDashboardPostcodes() {
+  if (dashboardPostcodesCache) return dashboardPostcodesCache;
+
+  const coords = new Map(POSTCODE_FALLBACK);
+
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/symerio/postal-codes-data/refs/heads/master/data/geonames/DK.txt');
+    if (res.ok) {
+      const text = await res.text();
+      text.trim().split(/\n/).forEach(line => {
+        const p = line.split('\t');
+        if (p.length >= 11) coords.set(p[1], { city:p[2], lat:+p[9], lon:+p[10] });
+      });
+    }
+  } catch (err) {
+    console.warn('Bruger indbygget postnummer-fallback til kortet.', err);
+  }
+
+  dashboardPostcodesCache = coords;
+  return coords;
+}
+
+function mapJitter(code, i) {
+  let x = 0;
+  for (const ch of (String(code) + '-' + i)) x = ((x << 5) - x + ch.charCodeAt(0)) | 0;
+  const a = (Math.abs(x) % 360) * Math.PI / 180;
+  const r = 0.004 + ((Math.abs(x) % 100) / 100) * 0.010;
+  return [Math.cos(a)*r, Math.sin(a)*r];
+}
+
+function extractDashboardPostcode(row) {
+  const fields = [
+    'Postnummer','Postnr','Post nr','Zip','Zipcode','Postal code',
+    'Postnummer og by','Postnr og by','Adresse','Address',
+    'Installationsadresse','Installations adresse','Kunde adresse','By','City'
+  ];
+
+  for (const field of fields) {
+    const value = get(row, [field]);
+    const match = String(value || '').match(/\b\d{4}\b/);
+    if (match) return match[0];
+  }
+
+  const allText = Object.values(row).join(' ');
+  const match = allText.match(/\b\d{4}\b/);
+  return match ? match[0] : '';
+}
+
+function mapStatusColor(row) {
+  const s = String(getStatus(row) || '').toLowerCase();
+  if (s.includes('afsluttet') || s.includes('udført') || s.includes('færdig')) return '#16a34a';
+  if (s.includes('afventer')) return '#f97316';
+  if (s.includes('annulleret') || s.includes('aflyst')) return '#dc2626';
+  if (s.includes('planlagt')) return '#7c3aed';
+  return '#0f766e';
+}
+
+
+function updateDashboardMapMode(map, markerGroup, heatLayer) {
+  if (!map || !markerGroup || !heatLayer) return;
+
+  if (dashboardHeatMapEnabled) {
+    if (map.hasLayer(markerGroup)) map.removeLayer(markerGroup);
+    if (!map.hasLayer(heatLayer)) map.addLayer(heatLayer);
+  } else {
+    if (map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+    if (!map.hasLayer(markerGroup)) map.addLayer(markerGroup);
+  }
+}
+
+function updateDashboardHeatButtons() {
+  ['toggleHeatMapBtn','toggleHeatMapFullscreenBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('active', dashboardHeatMapEnabled);
+    btn.textContent = dashboardHeatMapEnabled ? 'Heat til' : 'Heat';
+  });
+}
+
+function toggleDashboardHeatMap() {
+  dashboardHeatMapEnabled = !dashboardHeatMapEnabled;
+  updateDashboardHeatButtons();
+  updateDashboardMapMode(dashboardLeafletMap, dashboardMapMarkers, dashboardMapHeatLayer);
+  updateDashboardMapMode(dashboardFullscreenMap, dashboardFullscreenMarkers, dashboardFullscreenHeatLayer);
+}
+
+function addDashboardMarkersToGroup(rows, markerGroup, heatLayer, postcodes, statsElementId) {
+  markerGroup.clearLayers();
+  const heatBuckets = new Map();
+
+  const bounds = [];
+  let placed = 0;
+  let missing = 0;
+
+  rows.forEach((row, i) => {
+    const sag = get(row, ['Sagsnummer','Sag','Sag nr','Sagsnr']) || 'Sag';
+    const adresse = get(row, ['Adresse','Address','Installationsadresse','Kunde adresse']);
+    const by = get(row, ['By','Postnummer og by','Postnr og by','City']);
+    const zip = extractDashboardPostcode(row);
+
+    let lat = parseFloat(String(get(row, ['Latitude','Lat','Breddegrad'])).replace(',','.'));
+    let lon = parseFloat(String(get(row, ['Longitude','Lon','Lng','Længdegrad'])).replace(',','.'));
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      let c = postcodes.get(zip);
+      if (!c && zip) c = postcodes.get(zip.slice(0,2) + '00');
+      if (!c) {
+        missing++;
+        return;
+      }
+      const j = mapJitter(zip || i, i);
+      lat = c.lat + j[1];
+      lon = c.lon + j[0];
+    }
+
+    const marker = L.circleMarker([lat, lon], {
+      radius:7,
+      color:'#ffffff',
+      weight:2,
+      fillColor:mapStatusColor(row),
+      fillOpacity:0.9
+    });
+
+    const created = getCreatedDate(row);
+    const done = getExecutionDate(row);
+
+    marker.bindPopup(
+      '<strong>' + htmlEscape(sag) + '</strong><br>' +
+      htmlEscape([adresse, by].filter(Boolean).join(', ')) +
+      (created ? '<br>Oprettet: ' + htmlEscape(created.toLocaleDateString('da-DK')) : '') +
+      (done ? '<br>Udført: ' + htmlEscape(done.toLocaleDateString('da-DK')) : '') +
+      '<br>Status: <strong>' + htmlEscape(getStatus(row) || 'Ukendt') + '</strong>' +
+      (getType(row) ? '<br>Type: ' + htmlEscape(getType(row)) : '') +
+      (getOrdretype(row) ? '<br>Ordretype: ' + htmlEscape(getOrdretype(row)) : '')
+    );
+
+    markerGroup.addLayer(marker);
+
+    // Heatmap aggregeres pr. postnummer/koordinat i stedet for ét heat-punkt
+    // pr. sag. Det giver et mere detaljeret og mindre rødglødende kort.
+    const heatKey = zip || (lat.toFixed(3) + ',' + lon.toFixed(3));
+    const existingBucket = heatBuckets.get(heatKey) || { latSum:0, lonSum:0, count:0 };
+    existingBucket.latSum += lat;
+    existingBucket.lonSum += lon;
+    existingBucket.count += 1;
+    heatBuckets.set(heatKey, existingBucket);
+
+    bounds.push([lat, lon]);
+    placed++;
+  });
+
+  const heatPoints = [...heatBuckets.values()].map(bucket => {
+    const count = bucket.count || 1;
+    const avgLat = bucket.latSum / count;
+    const avgLon = bucket.lonSum / count;
+    // Blødere logaritmisk vægtning: hotspots fremhæves, men farverne mætter langsommere.
+    const intensity = Math.min(0.72, 0.08 + Math.log1p(count) / 9);
+    return [avgLat, avgLon, intensity];
+  });
+
+  latestMapHeatPoints = heatPoints;
+  if (heatLayer && typeof heatLayer.setLatLngs === 'function') heatLayer.setLatLngs(heatPoints);
+
+  const stats = document.getElementById(statsElementId);
+  if (stats) {
+    stats.textContent = placed.toLocaleString('da-DK') + ' placeret / ' + rows.length.toLocaleString('da-DK') + ' viste' + (missing ? ' - ' + missing.toLocaleString('da-DK') + ' uden postnr.' : '');
+  }
+
+  return bounds;
+}
+
+function fitDashboardMap(map, bounds) {
+  if (!map) return;
+  if (bounds.length) map.fitBounds(bounds, { padding:[24,24], maxZoom:9 });
+  else map.setView([56.05, 10.6], 6);
+  setTimeout(() => map.invalidateSize(), 150);
+}
+
+function initDashboardFullscreenMap() {
+  const el = document.getElementById('dashboardMapFullscreen');
+  if (!el || dashboardFullscreenMap || typeof L === 'undefined') return;
+
+  const dkBounds = L.latLngBounds(
+    [54.4, 7.8],
+    [57.9, 15.5]
+  );
+
+  dashboardFullscreenMap = L.map('dashboardMapFullscreen', {
+    zoomControl:true,
+    minZoom:6,
+    maxBounds: dkBounds,
+    maxBoundsViscosity: 1.0
+  }).setView([56.05, 10.6], 6);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:18,
+    noWrap:true,
+    bounds: dkBounds,
+    attribution:'&copy; OpenStreetMap'
+  }).addTo(dashboardFullscreenMap);
+
+  dashboardFullscreenMarkers = L.markerClusterGroup({ chunkedLoading:true, maxClusterRadius:42 });
+  dashboardFullscreenHeatLayer = L.heatLayer([], {
+    // Samme ekstra detaljerede heatmap som det lille kort, blot en anelse større
+    // fordi fullscreen-kortet har mere plads.
+    radius:10,
+    blur:6,
+    maxZoom:15,
+    max:1.0,
+    minOpacity:0.04,
+    gradient:{0.10:'#2c7bb6',0.32:'#abd9e9',0.55:'#ffffbf',0.78:'#fdae61',0.98:'#d7191c'}
+  });
+  dashboardFullscreenMap.addLayer(dashboardFullscreenMarkers);
+}
+
+async function openMapFullscreen() {
+  const overlay = document.getElementById('mapFullscreenOverlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  initDashboardFullscreenMap();
+
+  const postcodes = await loadDashboardPostcodes();
+  const bounds = addDashboardMarkersToGroup(latestMapRows, dashboardFullscreenMarkers, dashboardFullscreenHeatLayer, postcodes, 'mapFullscreenStats');
+  fitDashboardMap(dashboardFullscreenMap, bounds);
+  updateDashboardMapMode(dashboardFullscreenMap, dashboardFullscreenMarkers, dashboardFullscreenHeatLayer);
+  updateDashboardHeatButtons();
+}
+
+function closeMapFullscreen(event) {
+  if (event && event.target && event.target.id !== 'mapFullscreenOverlay') return;
+  const overlay = document.getElementById('mapFullscreenOverlay');
+  if (overlay) overlay.classList.remove('open');
+  setTimeout(() => {
+    if (dashboardLeafletMap) dashboardLeafletMap.invalidateSize();
+  }, 150);
+}
+
+document.addEventListener('click', event => {
+  if (event.target && event.target.id === 'maximizeMapBtn') openMapFullscreen();
+  if (event.target && event.target.id === 'toggleHeatMapBtn') toggleDashboardHeatMap();
+});
+
+
+async function renderDashboardMap(rows) {
+  try {
+    latestMapRows = rows;
+    initDashboardMap();
+    if (!dashboardLeafletMap || !dashboardMapMarkers) return;
+
+    const postcodes = await loadDashboardPostcodes();
+    const bounds = addDashboardMarkersToGroup(rows, dashboardMapMarkers, dashboardMapHeatLayer, postcodes, 'mapMiniStats');
+    fitDashboardMap(dashboardLeafletMap, bounds);
+    updateDashboardMapMode(dashboardLeafletMap, dashboardMapMarkers, dashboardMapHeatLayer);
+    updateDashboardHeatButtons();
+
+    const overlay = document.getElementById('mapFullscreenOverlay');
+    if (overlay && overlay.classList.contains('open')) {
+      initDashboardFullscreenMap();
+      const fullscreenBounds = addDashboardMarkersToGroup(rows, dashboardFullscreenMarkers, dashboardFullscreenHeatLayer, postcodes, 'mapFullscreenStats');
+      fitDashboardMap(dashboardFullscreenMap, fullscreenBounds);
+      updateDashboardMapMode(dashboardFullscreenMap, dashboardFullscreenMarkers, dashboardFullscreenHeatLayer);
+      updateDashboardHeatButtons();
+    }
+  } catch (err) {
+    console.error('Kortfejl:', err);
+    const stats = document.getElementById('mapMiniStats');
+    if (stats) stats.textContent = 'Kort kunne ikke vises';
+  }
+}
+
+function renderEmbeddedMap(rows) {
+  renderDashboardMap(rows);
+}
+
+</script>
+
+<div id="mapFullscreenOverlay" class="mapFullscreenOverlay" onclick="closeMapFullscreen(event)">
+  <div class="mapFullscreenCard" onclick="event.stopPropagation()">
+    <div class="dashboardMapHeader">
+      <span>DK kort - maksimeret</span>
+      <span class="mapHeaderActions">
+        <span id="mapFullscreenStats" class="mapMiniStats"></span>
+        <button id="toggleHeatMapFullscreenBtn" class="mapMaximizeBtn" type="button" onclick="toggleDashboardHeatMap()" title="Vis/skjul heatmap">Heat</button>
+        <button class="mapMaximizeBtn" type="button" onclick="closeMapFullscreen()">Luk</button>
+      </span>
+    </div>
+    <div id="dashboardMapFullscreen"></div>
+  </div>
+</div>
+
+<div id="caseDetailOverlay" class="detailOverlay" onclick="closeCaseDetail(event)">
+  <div class="detailModal" onclick="event.stopPropagation()">
+    <div class="detailHeader">
+      <h3 id="caseDetailTitle">Sagsdetaljer</h3>
+      <button class="secondary" type="button" onclick="closeCaseDetail()">Luk</button>
+    </div>
+    <div id="caseDetailBody" class="detailBody"></div>
+  </div>
+</div>
+
+</body>
+</html>
